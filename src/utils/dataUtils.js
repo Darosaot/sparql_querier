@@ -1,6 +1,6 @@
 import regression from 'regression';
 import * as ss from 'simple-statistics';
-import _ from 'lodash';
+// Removed unused lodash import
 
 /**
  * Converts SPARQL results to a more usable format for data analysis
@@ -87,10 +87,6 @@ export const performRegression = (data, columns, dependentVar, independentVars) 
     );
     const sumSquaredResiduals = squaredResiduals.reduce((sum, val) => sum + val, 0);
     const standardError = Math.sqrt(sumSquaredResiduals / (validData.length - 2));
-    
-    // Calculate p-value
-    // This is simplified - in a real implementation you would use a proper t-test
-    const tStat = slope / (standardError / Math.sqrt(ss.sumSimple(xValues.map(x => Math.pow(x - ss.mean(xValues), 2)))));
     
     // Calculate degrees of freedom
     const degreesOfFreedom = validData.length - 2;
