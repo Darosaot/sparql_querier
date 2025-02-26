@@ -10,16 +10,21 @@ import axios from 'axios';
 export const executeQuery = async (endpoint, query) => {
   const startTime = performance.now();
   
+  // Use a CORS proxy
+  const corsProxy = 'https://cors-anywhere.herokuapp.com/';
+  const proxiedEndpoint = corsProxy + endpoint;
+  
   try {
     // Prepare request parameters
     const params = new URLSearchParams();
     params.append('query', query);
     
     // Execute query with Accept header for JSON results
-    const response = await axios.get(endpoint, {
+    const response = await axios.get(proxiedEndpoint, {
       params,
       headers: {
-        'Accept': 'application/sparql-results+json'
+        'Accept': 'application/sparql-results+json',
+        'X-Requested-With': 'XMLHttpRequest' // Required by some CORS proxies
       }
     });
     
