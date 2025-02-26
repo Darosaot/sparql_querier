@@ -2,8 +2,6 @@
   "name": "sparql-analytics-react",
   "version": "0.1.0",
   "private": true,
-  // Remove this line - it's for GitHub Pages
-  // "homepage": "https://darosaot.github.io/sparql_querier_react",
   "dependencies": {
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
@@ -34,9 +32,6 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
-    // Remove these lines - they're for GitHub Pages
-    // "predeploy": "npm run build",
-    // "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": [
@@ -57,7 +52,5 @@
     ]
   },
   "devDependencies": {
-    // Remove this line - it's for GitHub Pages deployment
-    // "gh-pages": "^5.0.0"
   }
 }
