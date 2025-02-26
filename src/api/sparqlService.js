@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 /**
- * Executes a SPARQL query against a specified endpoint
+ * Executes a SPARQL query against a specified endpoint using a CORS proxy
  * 
  * @param {string} endpoint - The SPARQL endpoint URL
  * @param {string} query - The SPARQL query
@@ -10,40 +10,40 @@ import axios from 'axios';
 export const executeQuery = async (endpoint, query) => {
   const startTime = performance.now();
   
-  // Common headers for both methods
-  const commonHeaders = {
-    'Accept': 'application/sparql-results+json',
-    'User-Agent': 'SPARQL Analytics React Client/1.0'
-  };
+  // List of CORS proxies to try
+  const corsPxoies = [
+    'https://cors-anywhere.herokuapp.com/',
+    'https://api.allorigins.win/raw?url=',
+    'https://crossorigin.me/',
+    'https://cors-proxy.htmldriven.com/?url='
+  ];
 
-  // Try GET method first, then fallback to POST
-  const methods = ['get', 'post'];
-  
-  for (const method of methods) {
+  // Try each CORS proxy
+  for (const proxyUrl of corsPxoies) {
     try {
-      let response;
+      // Construct the proxied URL
+      const proxiedEndpoint = proxyUrl + encodeURIComponent(endpoint);
       
-      if (method === 'get') {
-        // GET method requires query to be URL encoded
-        response = await axios.get(endpoint, {
-          params: { query },
-          headers: commonHeaders
-        });
-      } else {
-        // POST method
-        response = await axios.post(endpoint, 
-          new URLSearchParams({ query }),
-          {
-            headers: {
-              ...commonHeaders,
-              'Content-Type': 'application/x-www-form-urlencoded'
-            }
-          }
-        );
-      }
+      console.log(`Trying CORS proxy: ${proxyUrl}`);
+      
+      const response = await axios.post(proxiedEndpoint, 
+        new URLSearchParams({
+          query: query
+        }),
+        {
+          headers: {
+            'Accept': 'application/sparql-results+json',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'SPARQL Analytics React Client/1.0',
+            // Some proxies require this header
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          timeout: 30000 // 30 seconds timeout
+        }
+      );
       
       const endTime = performance.now();
-      const executionTime = (endTime - startTime) / 1000; // Convert to seconds
+      const executionTime = (endTime - startTime) / 1000;
       
       // Process SPARQL results
       if (response.data.results && response.data.results.bindings) {
@@ -60,7 +60,7 @@ export const executeQuery = async (endpoint, query) => {
           columns,
           data,
           error: null,
-          method, // Return which method worked
+          proxy: proxyUrl,
           executionTime
         };
       } else {
@@ -69,52 +69,34 @@ export const executeQuery = async (endpoint, query) => {
           columns: response.data.head?.vars || [],
           data: response.data.results?.bindings || [],
           error: null,
-          method, // Return which method worked
+          proxy: proxyUrl,
           executionTime
         };
       }
     } catch (error) {
-      // If first method fails, continue to next method
-      if (method === 'post') {
+      console.error(`CORS proxy ${proxyUrl} failed:`, error.message);
+      
+      // If this is the last proxy, return an error
+      if (proxyUrl === corsPxoies[corsPxoies.length - 1]) {
         const endTime = performance.now();
         const executionTime = (endTime - startTime) / 1000;
         
-        console.error("Query execution error:", error);
-        
-        // More detailed error handling
-        if (error.response) {
-          return {
-            success: false,
-            columns: [],
-            data: [],
-            error: `Server responded with ${error.response.status}: ${JSON.stringify(error.response.data)}`,
-            executionTime
-          };
-        } else if (error.request) {
-          return {
-            success: false,
-            columns: [],
-            data: [],
-            error: 'No response received from the server. Check network connection or endpoint availability.',
-            executionTime
-          };
-        } else {
-          return {
-            success: false,
-            columns: [],
-            data: [],
-            error: `Request setup error: ${error.message}`,
-            executionTime
-          };
-        }
+        return {
+          success: false,
+          columns: [],
+          data: [],
+          error: `All CORS proxies failed. Last error: ${error.message}`,
+          executionTime
+        };
       }
-      // Continue to next method if current method fails
+      
+      // Continue to next proxy
       continue;
     }
   }
   
-  // If all methods fail
-  throw new Error('Unable to execute query with any method');
+  // Fallback error (shouldn't normally be reached)
+  throw new Error('Unable to execute query with any CORS proxy');
 };
 
 /**
