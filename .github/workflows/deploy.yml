@@ -30,6 +30,7 @@ jobs:
         run: npm run build
         env:
           CI: false
+          PUBLIC_URL: /sparql_querier_react
         
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
