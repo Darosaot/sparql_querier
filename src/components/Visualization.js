@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Card, Form, Row, Col, Button } from 'react-bootstrap';
+import { Card, Form, Row, Col } from 'react-bootstrap';
+// Removed the unused Button import
 import Plot from 'react-plotly.js';
 import { processData } from '../utils/dataUtils';
 
@@ -10,6 +11,9 @@ const Visualization = ({ data, columns }) => {
   const [customColor, setCustomColor] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#00f900');
   
+  // Rest of the component remains the same
+  // ...
+
   // Process data for visualization
   const processedData = processData(data, columns);
   
