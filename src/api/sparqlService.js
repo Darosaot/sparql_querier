@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 /**
- * Executes a SPARQL query against a specified endpoint
+ * Executes a SPARQL query against a specified endpoint using POST method
  * 
  * @param {string} endpoint - The SPARQL endpoint URL
  * @param {string} query - The SPARQL query
@@ -10,23 +10,20 @@ import axios from 'axios';
 export const executeQuery = async (endpoint, query) => {
   const startTime = performance.now();
   
-  // Use a CORS proxy
-  const corsProxy = 'https://cors-anywhere.herokuapp.com/';
-  const proxiedEndpoint = corsProxy + endpoint;
-  
   try {
-    // Prepare request parameters
-    const params = new URLSearchParams();
-    params.append('query', query);
-    
-    // Execute query with Accept header for JSON results
-    const response = await axios.get(proxiedEndpoint, {
-      params,
-      headers: {
-        'Accept': 'application/sparql-results+json',
-        'X-Requested-With': 'XMLHttpRequest' // Required by some CORS proxies
+    // Execute query with POST method
+    const response = await axios.post(endpoint, 
+      new URLSearchParams({
+        query: query
+      }),
+      {
+        headers: {
+          'Accept': 'application/sparql-results+json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'SPARQL Analytics React Client/1.0'
+        }
       }
-    });
+    );
     
     const endTime = performance.now();
     const executionTime = (endTime - startTime) / 1000; // Convert to seconds
@@ -61,14 +58,34 @@ export const executeQuery = async (endpoint, query) => {
     const endTime = performance.now();
     const executionTime = (endTime - startTime) / 1000;
     
-    console.error("Query execution failed:", error);
-    return {
-      success: false,
-      columns: [],
-      data: [],
-      error: error.message || 'Query execution failed',
-      executionTime
-    };
+    console.error("Query execution failed:", error.response ? error.response.data : error.message);
+    
+    // More detailed error handling
+    if (error.response) {
+      return {
+        success: false,
+        columns: [],
+        data: [],
+        error: `Server responded with ${error.response.status}: ${JSON.stringify(error.response.data)}`,
+        executionTime
+      };
+    } else if (error.request) {
+      return {
+        success: false,
+        columns: [],
+        data: [],
+        error: 'No response received from the server',
+        executionTime
+      };
+    } else {
+      return {
+        success: false,
+        columns: [],
+        data: [],
+        error: `Request setup error: ${error.message}`,
+        executionTime
+      };
+    }
   }
 };
 
