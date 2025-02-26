@@ -24,7 +24,7 @@ export const executeQuery = async (endpoint, query) => {
           'Accept': 'application/sparql-results+json',
           'Content-Type': 'application/x-www-form-urlencoded'
         },
-        timeout: 20000 // 20 seconds timeout
+        timeout: 2000000 // 2000 seconds timeout
       }
     );
     
