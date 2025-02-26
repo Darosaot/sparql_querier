@@ -1,3 +1,13 @@
+import axios from 'axios';
+
+/**
+ * Executes a SPARQL query against a specified endpoint
+ * First tries direct communication, then falls back to Netlify Function proxy if needed
+ * 
+ * @param {string} endpoint - The SPARQL endpoint URL
+ * @param {string} query - The SPARQL query
+ * @returns {Promise} - Promise resolving to the query results
+ */
 export const executeQuery = async (endpoint, query) => {
   const startTime = performance.now();
   
@@ -100,4 +110,15 @@ export const executeQuery = async (endpoint, query) => {
       };
     }
   }
+};
+
+/**
+ * Validates if a SPARQL query contains required keywords
+ * 
+ * @param {string} query - The SPARQL query to validate
+ * @returns {boolean} - True if the query is valid
+ */
+export const isValidSparql = (query) => {
+  const requiredKeywords = ['SELECT', 'WHERE', '{', '}'];
+  return requiredKeywords.every(keyword => query.includes(keyword));
 };
