@@ -7,9 +7,11 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -19,18 +21,22 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-          cache: 'npm'
+          # Removed cache option that was causing errors
           
       - name: Install dependencies
-        run: npm ci
+        run: npm install
+        
+      - name: Create lock file
+        run: npm i --package-lock-only
         
       - name: Update package.json homepage
         run: |
           npm pkg set homepage=https://darosaot.github.io/sparql_querier_react
           
-      - name: Build
+      - name: Build React app
         run: npm run build
         env:
+          CI: false
           PUBLIC_URL: /sparql_querier_react
           
       - name: Deploy to GitHub Pages
@@ -38,4 +44,3 @@ jobs:
         with:
           folder: build
           branch: gh-pages
-          clean: true
