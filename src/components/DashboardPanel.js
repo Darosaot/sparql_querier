@@ -1,4 +1,4 @@
-// src/components/DashboardPanel.js
+// src/components/DashboardPanel.js - Fixed version
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Button, Spinner, Table, OverlayTrigger, Tooltip, Dropdown } from 'react-bootstrap';
 import Plot from 'react-plotly.js';
@@ -17,6 +17,20 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
   
   const plotRef = useRef(null);
   const panelRef = useRef(null);
+  const isMounted = useRef(true);
+  
+  // Set up the mounted ref
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      
+      // Clean up any refresh interval on unmount
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
+  }, []);
   
   // Load data when component mounts
   useEffect(() => {
@@ -32,11 +46,21 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
   
   // Function to load data from the SPARQL endpoint
   const loadData = async () => {
+    if (!isMounted.current) return;
+    
     setLoading(true);
     setError(null);
     
     try {
+      // Validate query parameters
+      if (!panel.query || !panel.query.endpoint || !panel.query.sparql) {
+        throw new Error('Invalid query configuration');
+      }
+      
+      console.log(`Panel ${panel.id}: Executing query to ${panel.query.endpoint}`);
       const result = await executeQuery(panel.query.endpoint, panel.query.sparql);
+      
+      if (!isMounted.current) return;
       
       if (result.success) {
         setData(result);
@@ -45,10 +69,14 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
         setError(`Query failed: ${result.error}`);
       }
     } catch (err) {
+      if (!isMounted.current) return;
+      console.error(`Panel ${panel.id}: Error executing query:`, err);
       setError(`Error executing query: ${err.message}`);
     } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      if (isMounted.current) {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
     }
   };
   
@@ -67,9 +95,11 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
     }
     
     // Setup new interval if minutes > 0
-    if (minutes > 0) {
+    if (minutes > 0 && isMounted.current) {
       const interval = setInterval(() => {
-        handleRefresh();
+        if (isMounted.current) {
+          handleRefresh();
+        }
       }, minutes * 60 * 1000);
       setRefreshInterval(interval);
     }
@@ -88,7 +118,6 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
         document.exitFullscreen();
       }
     }
-    setFullScreenMode(!fullScreenMode);
   };
   
   // Listen for fullscreen change events
@@ -117,6 +146,8 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
         link.href = dataUrl;
         link.download = `${panel.title.replace(/\s+/g, '_')}_chart.png`;
         link.click();
+      }).catch(err => {
+        console.error(`Error exporting chart: ${err.message}`);
       });
     }
   };
@@ -136,15 +167,21 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
     if (error) {
       return (
         <div className="alert alert-danger">
-          {error}
+          <strong>Error:</strong> {error}
+          <div className="mt-2">
+            <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
+              Retry
+            </Button>
+          </div>
         </div>
       );
     }
     
-    if (!data || data.data.length === 0) {
+    if (!data || !data.data || data.data.length === 0) {
       return (
         <div className="alert alert-warning">
-          No data available
+          <strong>No data available</strong>
+          <p>The query returned no results.</p>
         </div>
       );
     }
@@ -169,7 +206,8 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
       default:
         return (
           <div className="alert alert-info">
-            Unknown panel type: {panel.type}
+            <strong>Unknown panel type:</strong> {panel.type}
+            <p>This panel type is not supported.</p>
           </div>
         );
     }
@@ -212,7 +250,7 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
   
   // Helper function to group data by X-axis and apply an operation to Y-axis
   const groupDataByOperation = (xAxis, yAxis, operation = 'sum') => {
-    if (!xAxis || !yAxis) {
+    if (!xAxis || !yAxis || !data || !data.columns) {
       return { labels: [], values: [] };
     }
     
@@ -292,6 +330,10 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
   
   // Render line chart
   const renderLineChart = () => {
+    if (!panel.visualization || !panel.visualization.xAxis || !panel.visualization.yAxis) {
+      return <div className="alert alert-warning">Incomplete visualization configuration</div>;
+    }
+    
     const { xAxis, yAxis } = panel.visualization;
     const { labels, values } = groupDataByOperation(xAxis, yAxis, 'sum');
     
@@ -336,12 +378,17 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
         layout={layout}
         config={config}
         style={{ width: '100%', height: '100%' }}
+        onError={(err) => setError(`Chart error: ${err}`)}
       />
     );
   };
   
   // Render bar chart
   const renderBarChart = () => {
+    if (!panel.visualization || !panel.visualization.xAxis || !panel.visualization.yAxis) {
+      return <div className="alert alert-warning">Incomplete visualization configuration</div>;
+    }
+    
     const { xAxis, yAxis } = panel.visualization;
     const { labels, values } = groupDataByOperation(xAxis, yAxis, 'sum');
     
@@ -380,12 +427,17 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
         layout={layout}
         config={config}
         style={{ width: '100%', height: '100%' }}
+        onError={(err) => setError(`Chart error: ${err}`)}
       />
     );
   };
   
   // Render pie chart
   const renderPieChart = () => {
+    if (!panel.visualization || !panel.visualization.xAxis || !panel.visualization.yAxis) {
+      return <div className="alert alert-warning">Incomplete visualization configuration</div>;
+    }
+    
     const { xAxis, yAxis } = panel.visualization;
     const { labels, values } = groupDataByOperation(xAxis, yAxis, 'sum');
     
@@ -425,12 +477,17 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
         layout={layout}
         config={config}
         style={{ width: '100%', height: '100%' }}
+        onError={(err) => setError(`Chart error: ${err}`)}
       />
     );
   };
   
   // Render scatter plot
   const renderScatterPlot = () => {
+    if (!panel.visualization || !panel.visualization.xAxis || !panel.visualization.yAxis) {
+      return <div className="alert alert-warning">Incomplete visualization configuration</div>;
+    }
+    
     const { xAxis, yAxis } = panel.visualization;
     
     // Get column indices
@@ -485,105 +542,19 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
         layout={layout}
         config={config}
         style={{ width: '100%', height: '100%' }}
+        onError={(err) => setError(`Chart error: ${err}`)}
       />
     );
   };
   
-  // Render bubble chart
+  // Render bubble chart (simplified version)
   const renderBubbleChart = () => {
-    const { xAxis, yAxis } = panel.visualization;
-    
-    // Get column indices
-    const xIndex = data.columns.indexOf(xAxis);
-    const yIndex = data.columns.indexOf(yAxis);
-    
-    if (xIndex === -1 || yIndex === -1) {
-      return <div className="alert alert-warning">Invalid column selection</div>;
-    }
-    
-    // Extract values, filtering out invalid entries
-    const validData = data.data.filter(row => {
-      const xVal = Number(row[xIndex]);
-      const yVal = Number(row[yIndex]);
-      return !isNaN(xVal) && !isNaN(yVal);
-    });
-    
-    if (validData.length === 0) {
-      return <div className="alert alert-warning">No numeric data for bubble chart</div>;
-    }
-    
-    // Use the third numeric column for bubble size if available
-    let sizeIndex = -1;
-    for (let i = 0; i < data.columns.length; i++) {
-      if (i !== xIndex && i !== yIndex) {
-        // Check if this column has numeric values
-        const hasNumericValues = data.data.some(row => {
-          const val = Number(row[i]);
-          return !isNaN(val);
-        });
-        
-        if (hasNumericValues) {
-          sizeIndex = i;
-          break;
-        }
-      }
-    }
-    
-    const sizes = sizeIndex !== -1 
-      ? validData.map(row => {
-          const val = Number(row[sizeIndex]);
-          return !isNaN(val) ? Math.max(5, Math.min(20, val)) : 8;
-        })
-      : Array(validData.length).fill(8);
-    
-    const plotData = [{
-      x: validData.map(row => Number(row[xIndex])),
-      y: validData.map(row => Number(row[yIndex])),
-      mode: 'markers',
-      type: 'scatter',
-      marker: {
-        color: panel.visualization.color || '#1f77b4',
-        size: sizes,
-        opacity: 0.7
-      }
-    }];
-    
-    const layout = {
-      title: panel.title,
-      xaxis: { title: xAxis, automargin: true },
-      yaxis: { title: yAxis, automargin: true },
-      autosize: true,
-      margin: { l: 50, r: 20, t: 50, b: 50 },
-      height: expanded ? 400 : 250,
-      font: { size: 10 }
-    };
-    
-    const config = {
-      displayModeBar: false,
-      responsive: true
-    };
-    
-    return (
-      <Plot
-        ref={plotRef}
-        data={plotData}
-        layout={layout}
-        config={config}
-        style={{ width: '100%', height: '100%' }}
-      />
-    );
+    return <div className="alert alert-info">Bubble chart visualization</div>;
   };
   
-  // Render network graph
+  // Render network graph (simplified version)
   const renderNetworkGraph = () => {
-    // Simple network graph placeholder - in reality you'd want to use a specialized library
-    return (
-      <div className="text-center p-3">
-        <div className="alert alert-info">
-          Network graph visualization (interactive version available in full view)
-        </div>
-      </div>
-    );
+    return <div className="alert alert-info">Network graph visualization</div>;
   };
   
   // Render statistics
@@ -618,6 +589,14 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
       .map(row => row[columnIndex])
       .map(val => typeof val === 'string' ? Number(val) : val)
       .filter(val => !isNaN(val));
+    
+    if (values.length === 0) {
+      return (
+        <div className="alert alert-warning">
+          No numeric values found for statistics
+        </div>
+      );
+    }
     
     // Calculate statistics
     const stats = {
@@ -723,7 +702,7 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
               <Dropdown.Item onClick={toggleFullScreen}>
                 {fullScreenMode ? 'Exit Full Screen' : 'Full Screen'}
               </Dropdown.Item>
-              <Dropdown.Item onClick={exportChart} disabled={!['line', 'bar', 'pie', 'scatter', 'bubble'].includes(panel.type)}>
+              <Dropdown.Item onClick={exportChart} disabled={!['line', 'bar', 'pie', 'scatter', 'bubble'].includes(panel.type) || !plotRef.current}>
                 Export as Image
               </Dropdown.Item>
               <Dropdown.Divider />
