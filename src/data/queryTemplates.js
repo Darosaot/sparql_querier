@@ -42,7 +42,6 @@ WHERE {
         ?notice epo:hasDispatchDate ?date .
     }
     BIND(IF(BOUND(?date),year(xsd:date(?date)),"") AS ?year)
-    FILTER(?year=2022)
     BIND(IF(BOUND(?date),month(xsd:date(?date)),"") AS ?month)
     BIND(IF(!BOUND(?month), "",
         IF(?month = 1, "January",
