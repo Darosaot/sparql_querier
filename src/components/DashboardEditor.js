@@ -890,8 +890,8 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
                 rows={5}
                 placeholder="Enter your SPARQL query"
                 value={newPanelQuery}
-                onChange={(e) => setNewPanelQuery(e.target.
-              />
+                onChange={(e) => setNewPanelQuery(e.target.value)}
+                  />
             </Form.Group>
             
             <div className="d-grid mb-3">
