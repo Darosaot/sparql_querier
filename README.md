@@ -1,6 +1,6 @@
-# SPARQL Analytics React
+# SPARQL Analytics
 
-A React-based application for querying SPARQL endpoints and visualizing the results. This application allows users to execute SPARQL queries, visualize the data using different chart types, perform regression analysis, export the results in various formats, and create custom dashboards.
+An application for querying SPARQL endpoints and visualizing the results. This application allows users to execute SPARQL queries, visualize the data using different chart types, perform regression analysis, export the results in various formats, and create custom dashboards.
 
 ## Features
 
