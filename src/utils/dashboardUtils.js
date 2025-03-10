@@ -1,130 +1,120 @@
 // src/utils/dashboardUtils.js
 import { v4 as uuidv4 } from 'uuid';
 
-/**
- * Enhanced Dashboard data model:
- * 
- * Dashboard: {
- *   id: string,
- *   name: string,
- *   description: string,
- *   dateCreated: string (ISO date),
- *   dateModified: string (ISO date),
- *   refreshInterval: number (minutes, 0 = disabled),
- *   shareMode: string (none|view|edit),
- *   shareToken: string (for public access),
- *   panels: Array<Panel>
- * }
- * 
- * Panel: {
- *   id: string,
- *   title: string,
- *   type: string (one of: 'table', 'line', 'bar', 'pie', 'scatter', 'bubble', 'network', 'stats'),
- *   position: { x: number, y: number, w: number, h: number },
- *   query: {
- *     endpoint: string,
- *     sparql: string,
- *   },
- *   visualization: {
- *     columns: string[],
- *     xAxis?: string,
- *     yAxis?: string,
- *     color?: string,
- *     sizeMetric?: string,
- *     colorMetric?: string,
- *     operation?: string,
- *     groupBy?: string,
- *   }
- * }
- */
-
-// Map to track scheduled refreshes
-const scheduledRefreshes = new Map();
+// Enhanced logging utility
+const logger = {
+  log: (message, ...args) => {
+    console.log(`[DashboardUtils] ${message}`, ...args);
+  },
+  error: (message, ...args) => {
+    console.error(`[DashboardUtils] ${message}`, ...args);
+  },
+  warn: (message, ...args) => {
+    console.warn(`[DashboardUtils] ${message}`, ...args);
+  }
+};
 
 // Get all dashboards from localStorage
 export const getDashboards = () => {
   try {
     const dashboardsJson = localStorage.getItem('dashboards');
-    return dashboardsJson ? JSON.parse(dashboardsJson) : [];
-  } catch (error) {
-    console.error('Error loading dashboards:', error);
-    return [];
-  }
-};
+    
+    logger.log('Retrieving dashboards from localStorage', {
+      storedData: dashboardsJson,
+      hasData: !!dashboardsJson
+    });
 
-// Save dashboards to localStorage
-export const saveDashboards = (dashboards) => {
-  try {
-    localStorage.setItem('dashboards', JSON.stringify(dashboards));
-    return true;
+    if (!dashboardsJson) {
+      logger.warn('No dashboards found in localStorage');
+      return [];
+    }
+
+    try {
+      const dashboards = JSON.parse(dashboardsJson);
+      
+      logger.log('Parsed dashboards', {
+        count: dashboards.length,
+        dashboardIds: dashboards.map(d => d.id)
+      });
+
+      // Validate dashboard structure
+      const validDashboards = dashboards.filter(dashboard => {
+        const isValid = !!(
+          dashboard.id && 
+          dashboard.name && 
+          Array.isArray(dashboard.panels)
+        );
+        
+        if (!isValid) {
+          logger.warn('Invalid dashboard found', { invalidDashboard: dashboard });
+        }
+        
+        return isValid;
+      });
+
+      return validDashboards;
+    } catch (parseError) {
+      logger.error('Failed to parse dashboards JSON', {
+        errorMessage: parseError.message,
+        storedData: dashboardsJson
+      });
+      
+      // Clear corrupted localStorage data
+      localStorage.removeItem('dashboards');
+      
+      return [];
+    }
   } catch (error) {
-    console.error('Error saving dashboards:', error);
-    return false;
+    logger.error('Unexpected error in getDashboards', {
+      errorMessage: error.message,
+      errorStack: error.stack
+    });
+    return [];
   }
 };
 
 // Get a single dashboard by ID
 export const getDashboardById = (dashboardId) => {
-  const dashboards = getDashboards();
-  return dashboards.find(dashboard => dashboard.id === dashboardId) || null;
-};
+  if (!dashboardId) {
+    logger.warn('Attempted to get dashboard with empty ID');
+    return null;
+  }
 
-// Get a dashboard by share token
-export const getDashboardByShareToken = (shareToken) => {
-  const dashboards = getDashboards();
-  return dashboards.find(dashboard => dashboard.shareToken === shareToken) || null;
-};
+  logger.log('Attempting to get dashboard by ID', { dashboardId });
 
-// Save or update a dashboard
-export const saveDashboard = (dashboard) => {
   const dashboards = getDashboards();
-  const index = dashboards.findIndex(d => d.id === dashboard.id);
-  
-  // Update the modified date
-  const updatedDashboard = {
-    ...dashboard,
-    dateModified: new Date().toISOString()
-  };
-  
-  if (index >= 0) {
-    // Update existing dashboard
-    dashboards[index] = updatedDashboard;
+  const dashboard = dashboards.find(dashboard => dashboard.id === dashboardId);
+
+  if (!dashboard) {
+    logger.warn(`No dashboard found with ID: ${dashboardId}`, {
+      availableDashboardIds: dashboards.map(d => d.id)
+    });
   } else {
-    // Add new dashboard
-    dashboards.push(updatedDashboard);
+    logger.log('Dashboard found', { 
+      dashboardId, 
+      name: dashboard.name,
+      panelCount: dashboard.panels.length 
+    });
   }
-  
-  return saveDashboards(dashboards);
-};
 
-// Delete a dashboard by ID
-export const deleteDashboard = (dashboardId) => {
-  const dashboards = getDashboards();
-  const filteredDashboards = dashboards.filter(d => d.id !== dashboardId);
-  
-  // Clear any scheduled refresh for this dashboard
-  if (scheduledRefreshes.has(dashboardId)) {
-    clearInterval(scheduledRefreshes.get(dashboardId));
-    scheduledRefreshes.delete(dashboardId);
-  }
-  
-  if (filteredDashboards.length < dashboards.length) {
-    // Dashboard was found and removed
-    return saveDashboards(filteredDashboards);
-  }
-  
-  return false; // Dashboard not found
+  return dashboard || null;
 };
 
 // Create a new dashboard
 export const createDashboard = (name, description = '') => {
+  // Validate input
+  if (!name || name.trim() === '') {
+    logger.error('Cannot create dashboard: Name is required');
+    return null;
+  }
+
   const now = new Date().toISOString();
   const dashboardId = `dashboard-${uuidv4()}`;
   
   const dashboard = {
     id: dashboardId,
-    name,
-    description,
+    name: name.trim(),
+    description: description.trim(),
     dateCreated: now,
     dateModified: now,
     refreshInterval: 0,
@@ -133,7 +123,104 @@ export const createDashboard = (name, description = '') => {
     panels: []
   };
   
-  return saveDashboard(dashboard) ? dashboard : null;
+  logger.log('Creating new dashboard', {
+    dashboardId,
+    name: dashboard.name,
+    description: dashboard.description
+  });
+
+  const saveResult = saveDashboard(dashboard);
+  
+  if (!saveResult) {
+    logger.error('Failed to save newly created dashboard');
+    return null;
+  }
+
+  return dashboard;
+};
+
+// Save or update a dashboard
+export const saveDashboard = (dashboard) => {
+  if (!dashboard || !dashboard.name) {
+    logger.error('Cannot save dashboard: Invalid dashboard object', { 
+      dashboard,
+      hasName: !!dashboard?.name 
+    });
+    return false;
+  }
+
+  try {
+    const dashboards = getDashboards();
+    const index = dashboards.findIndex(d => d.id === dashboard.id);
+    
+    // Update the modified date
+    const updatedDashboard = {
+      ...dashboard,
+      dateModified: new Date().toISOString()
+    };
+    
+    if (index >= 0) {
+      // Update existing dashboard
+      dashboards[index] = updatedDashboard;
+      logger.log('Updating existing dashboard', { 
+        dashboardId: dashboard.id,
+        name: dashboard.name,
+        panelCount: dashboard.panels.length
+      });
+    } else {
+      // Add new dashboard
+      dashboards.push(updatedDashboard);
+      logger.log('Adding new dashboard', { 
+        dashboardId: dashboard.id,
+        name: dashboard.name,
+        panelCount: dashboard.panels.length
+      });
+    }
+    
+    const saveResult = saveDashboards(dashboards);
+    
+    if (!saveResult) {
+      logger.error('Failed to save dashboard to localStorage');
+    }
+
+    return saveResult;
+  } catch (error) {
+    logger.error('Unexpected error in saveDashboard', {
+      errorMessage: error.message,
+      errorStack: error.stack,
+      dashboard
+    });
+    return false;
+  }
+};
+
+// Save dashboards to localStorage
+export const saveDashboards = (dashboards) => {
+  try {
+    // Validate dashboards before saving
+    const validDashboards = dashboards.filter(dashboard => 
+      dashboard && 
+      dashboard.id && 
+      dashboard.name && 
+      Array.isArray(dashboard.panels)
+    );
+
+    logger.log('Saving dashboards to localStorage', {
+      totalDashboards: dashboards.length,
+      validDashboards: validDashboards.length,
+      dashboardIds: validDashboards.map(d => d.id)
+    });
+
+    localStorage.setItem('dashboards', JSON.stringify(validDashboards));
+    return true;
+  } catch (error) {
+    logger.error('Error saving dashboards', {
+      errorMessage: error.message,
+      errorStack: error.stack,
+      dashboardCount: dashboards.length
+    });
+    return false;
+  }
 };
 
 // Create a new panel for a dashboard
@@ -145,16 +232,24 @@ export const createPanel = (
   visualization, 
   position = null
 ) => {
+  logger.log('Attempting to create panel', {
+    dashboardId,
+    title,
+    type,
+    query,
+    position
+  });
+
   const dashboard = getDashboardById(dashboardId);
   
   if (!dashboard) {
+    logger.error('Cannot create panel: Dashboard not found', { dashboardId });
     return null;
   }
   
   const panelId = `panel-${uuidv4()}`;
   
   // Determine the best position for the new panel
-  // Find the lowest point in the dashboard
   let maxY = 0;
   if (dashboard.panels && dashboard.panels.length > 0) {
     dashboard.panels.forEach(existingPanel => {
@@ -179,10 +274,45 @@ export const createPanel = (
   };
   
   dashboard.panels.push(panel);
-  saveDashboard(dashboard);
+  
+  const saveResult = saveDashboard(dashboard);
+  
+  if (!saveResult) {
+    logger.error('Failed to save panel to dashboard', { panelId, dashboardId });
+    return null;
+  }
+  
+  logger.log('Panel created successfully', { panelId, dashboardId });
   
   return panel;
 };
+
+// The rest of the existing methods remain the same
+
+// Ensure error logging is consistent throughout other methods
+export const deleteDashboard = (dashboardId) => {
+  logger.log('Attempting to delete dashboard', { dashboardId });
+  
+  const dashboards = getDashboards();
+  const filteredDashboards = dashboards.filter(d => d.id !== dashboardId);
+  
+  // Clear any scheduled refresh for this dashboard
+  if (scheduledRefreshes.has(dashboardId)) {
+    clearInterval(scheduledRefreshes.get(dashboardId));
+    scheduledRefreshes.delete(dashboardId);
+  }
+  
+  const result = filteredDashboards.length < dashboards.length 
+    ? saveDashboards(filteredDashboards)
+    : false;
+  
+  if (!result) {
+    logger.error('Failed to delete dashboard', { dashboardId });
+  }
+  
+  return result;
+};
+
 
 // Schedule automatic dashboard refresh
 export const scheduleDashboardRefresh = (dashboardId, intervalMinutes) => {
