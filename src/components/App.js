@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Container, Row, Col, Nav, Tab } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Header from './Header';
 import QueryEditor from './QueryEditor';
@@ -7,6 +7,7 @@ import ResultsTable from './ResultsTable';
 import Visualization from './Visualization';
 import RegressionAnalysis from './RegressionAnalysis';
 import ExportOptions from './ExportOptions';
+import BulkDataExport from './BulkDataExport';
 import { executeQuery, isValidSparql } from '../api/sparqlService';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
   const [queryResults, setQueryResults] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('sparql-query');
   
   // Function to handle query execution
   const handleExecuteQuery = async () => {
@@ -54,52 +56,75 @@ function App() {
     <div className="App">
       <Header />
       <Container fluid>
-        <Row className="mt-3">
-          <Col md={12}>
-            <QueryEditor 
-              sparqlEndpoint={sparqlEndpoint}
-              setSparqlEndpoint={setSparqlEndpoint}
-              query={query}
-              setQuery={setQuery}
-              onExecute={handleExecuteQuery}
-              isLoading={isLoading}
-            />
-            
-            {error && (
-              <div className="alert alert-danger mt-3" role="alert">
-                {error}
-              </div>
-            )}
-            
-            {queryResults && queryResults.data.length > 0 && (
-              <>
-                <div className="alert alert-success mt-3" role="alert">
-                  Query executed successfully, retrieved {queryResults.data.length} results in {queryResults.executionTime.toFixed(2)} seconds.
-                </div>
+        <Tab.Container activeKey={activeTab} onSelect={(key) => setActiveTab(key)}>
+          <Row className="mt-3 mb-3">
+            <Col>
+              <Nav variant="tabs">
+                <Nav.Item>
+                  <Nav.Link eventKey="sparql-query">SPARQL Query</Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link eventKey="bulk-export">Bulk Data Export</Nav.Link>
+                </Nav.Item>
+              </Nav>
+            </Col>
+          </Row>
+          
+          <Row>
+            <Col>
+              <Tab.Content>
+                <Tab.Pane eventKey="sparql-query">
+                  <QueryEditor 
+                    sparqlEndpoint={sparqlEndpoint}
+                    setSparqlEndpoint={setSparqlEndpoint}
+                    query={query}
+                    setQuery={setQuery}
+                    onExecute={handleExecuteQuery}
+                    isLoading={isLoading}
+                  />
+                  
+                  {error && (
+                    <div className="alert alert-danger mt-3" role="alert">
+                      {error}
+                    </div>
+                  )}
+                  
+                  {queryResults && queryResults.data.length > 0 && (
+                    <>
+                      <div className="alert alert-success mt-3" role="alert">
+                        Query executed successfully, retrieved {queryResults.data.length} results in {queryResults.executionTime.toFixed(2)} seconds.
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h3>Results</h3>
+                        <ResultsTable data={queryResults.data} columns={queryResults.columns} />
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h3>Data Visualization</h3>
+                        <Visualization data={queryResults.data} columns={queryResults.columns} />
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h3>Regression Analysis</h3>
+                        <RegressionAnalysis data={queryResults.data} columns={queryResults.columns} />
+                      </div>
+                      
+                      <div className="mt-4 mb-5">
+                        <h3>Export Results</h3>
+                        <ExportOptions data={queryResults.data} columns={queryResults.columns} />
+                      </div>
+                    </>
+                  )}
+                </Tab.Pane>
                 
-                <div className="mt-4">
-                  <h3>Results</h3>
-                  <ResultsTable data={queryResults.data} columns={queryResults.columns} />
-                </div>
-                
-                <div className="mt-4">
-                  <h3>Data Visualization</h3>
-                  <Visualization data={queryResults.data} columns={queryResults.columns} />
-                </div>
-                
-                <div className="mt-4">
-                  <h3>Regression Analysis</h3>
-                  <RegressionAnalysis data={queryResults.data} columns={queryResults.columns} />
-                </div>
-                
-                <div className="mt-4 mb-5">
-                  <h3>Export Results</h3>
-                  <ExportOptions data={queryResults.data} columns={queryResults.columns} />
-                </div>
-              </>
-            )}
-          </Col>
-        </Row>
+                <Tab.Pane eventKey="bulk-export">
+                  <BulkDataExport />
+                </Tab.Pane>
+              </Tab.Content>
+            </Col>
+          </Row>
+        </Tab.Container>
       </Container>
     </div>
   );
