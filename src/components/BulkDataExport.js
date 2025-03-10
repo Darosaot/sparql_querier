@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, ProgressBar } from 'react-bootstrap';
 import { executeQuery } from '../api/sparqlService';
 
-// Import query definitions from PPDS_queries.py
+// Import query definitions from bulkExportQueries.js
 import {
   notice_details_query_part1,
   notice_details_query_part2,
@@ -16,12 +16,15 @@ const BulkDataExport = () => {
   const [isAuthorized, setIsAuthorized] = useState(true); // Set to true for development
 
   // Form states
+  const [sparqlEndpoint, setSparqlEndpoint] = useState('https://data.europa.eu/a4g/sparql');
   const [dateRange, setDateRange] = useState({
     startDate: '2023-01-01',
     endDate: '2025-01-01',
   });
+  const [useNamedGraph, setUseNamedGraph] = useState(true);
   const [selectedGraphs, setSelectedGraphs] = useState(['https://data.europa.eu/a4g/graph/dgGrow']);
   const [selectedDataGroups, setSelectedDataGroups] = useState([]);
+  const [selectedFields, setSelectedFields] = useState({});
   const [email, setEmail] = useState('');
   
   // UI states
@@ -106,6 +109,22 @@ const BulkDataExport = () => {
     }
   ];
 
+  // Initialize selected fields when component mounts
+  React.useEffect(() => {
+    const initialSelectedFields = {};
+    
+    dataGroups.forEach(group => {
+      initialSelectedFields[group.id] = {};
+      
+      group.fields.forEach(field => {
+        // Pre-select required fields
+        initialSelectedFields[group.id][field.id] = field.required;
+      });
+    });
+    
+    setSelectedFields(initialSelectedFields);
+  }, []);
+
   // Handle date range changes
   const handleDateChange = (e) => {
     const { name, value } = e.target;
@@ -132,6 +151,41 @@ const BulkDataExport = () => {
     }
   };
 
+  // Handle select/deselect all data groups
+  const handleSelectAllDataGroups = (selectAll) => {
+    if (selectAll) {
+      setSelectedDataGroups(dataGroups.map(group => group.id));
+    } else {
+      setSelectedDataGroups([]);
+    }
+  };
+
+  // Handle field selection changes
+  const handleFieldSelection = (groupId, fieldId, checked) => {
+    setSelectedFields(prev => ({
+      ...prev,
+      [groupId]: {
+        ...prev[groupId],
+        [fieldId]: checked
+      }
+    }));
+  };
+
+  // Handle select/deselect all fields for a group
+  const handleSelectAllFields = (groupId, selectAll) => {
+    const updatedFields = { ...selectedFields };
+    
+    // Get all fields for this group
+    const groupFields = dataGroups.find(g => g.id === groupId).fields;
+    
+    // Update each field, but ensure required fields remain selected
+    groupFields.forEach(field => {
+      updatedFields[groupId][field.id] = field.required || selectAll;
+    });
+    
+    setSelectedFields(updatedFields);
+  };
+
   // Get the query by data group ID
   const getQueryByDataGroup = (groupId, offset = 0, limit = 1000) => {
     const queries = {
@@ -144,11 +198,24 @@ const BulkDataExport = () => {
     
     // Format query with offset and limit
     let query = queries[groupId] || '';
+    
+    // Modify query to include or exclude the GRAPH clause based on useNamedGraph
+    if (!useNamedGraph) {
+      // Remove GRAPH clauses from the query
+      query = query.replace(/GRAPH\s+<[^>]+>\s*\{/g, '');
+      query = query.replace(/\}\s*(?=OPTIONAL|FILTER|BIND|LIMIT|ORDER BY|GROUP BY|$)/g, '');
+    }
+    
     return query.replace('{offset}', offset).replace('{limit}', limit);
   };
 
   // Execute data export process
   const startDataExport = async () => {
+    if (!sparqlEndpoint) {
+      setError('Please provide a SPARQL endpoint URL.');
+      return;
+    }
+
     if (!email) {
       setError('Please provide an email address to receive the export notification.');
       return;
@@ -178,6 +245,13 @@ const BulkDataExport = () => {
       for (const groupId of selectedDataGroups) {
         // In a real app, this would be sent to a backend job queue
         console.log(`Starting export for ${groupId} with date range ${dateRange.startDate} to ${dateRange.endDate}`);
+        
+        // Get selected fields for this group
+        const fields = Object.entries(selectedFields[groupId] || {})
+          .filter(([_, isSelected]) => isSelected)
+          .map(([fieldId]) => fieldId);
+        
+        console.log(`Selected fields for ${groupId}:`, fields);
         
         // Simulating query execution
         const query = getQueryByDataGroup(groupId);
@@ -246,6 +320,22 @@ const BulkDataExport = () => {
           )}
 
           <Form>
+            {/* SPARQL Endpoint */}
+            <Form.Group as={Row} className="mb-3">
+              <Form.Label column sm="3">SPARQL Endpoint</Form.Label>
+              <Col sm="9">
+                <Form.Control
+                  type="text"
+                  placeholder="Enter SPARQL endpoint URL"
+                  value={sparqlEndpoint}
+                  onChange={(e) => setSparqlEndpoint(e.target.value)}
+                />
+                <Form.Text className="text-muted">
+                  Example: https://data.europa.eu/a4g/sparql
+                </Form.Text>
+              </Col>
+            </Form.Group>
+
             {/* Date Range Selection */}
             <Form.Group as={Row} className="mb-3">
               <Form.Label column sm="3">Date Range</Form.Label>
@@ -273,21 +363,34 @@ const BulkDataExport = () => {
               </Col>
             </Form.Group>
 
-            {/* Graph Selection */}
+            {/* Named Graph Selection */}
             <Form.Group as={Row} className="mb-3">
-              <Form.Label column sm="3">Select Graphs</Form.Label>
+              <Form.Label column sm="3">Named Graph</Form.Label>
               <Col sm="9">
-                {availableGraphs.map(graph => (
-                  <Form.Check
-                    key={graph.id}
-                    type="checkbox"
-                    id={`graph-${graph.id}`}
-                    label={graph.label}
-                    value={graph.value}
-                    checked={selectedGraphs.includes(graph.value)}
-                    onChange={handleGraphSelection}
-                  />
-                ))}
+                <Form.Check
+                  type="checkbox"
+                  id="use-named-graph"
+                  label="Use Named Graph"
+                  checked={useNamedGraph}
+                  onChange={(e) => setUseNamedGraph(e.target.checked)}
+                  className="mb-2"
+                />
+                
+                {useNamedGraph && (
+                  <>
+                    {availableGraphs.map(graph => (
+                      <Form.Check
+                        key={graph.id}
+                        type="checkbox"
+                        id={`graph-${graph.id}`}
+                        label={graph.label}
+                        value={graph.value}
+                        checked={selectedGraphs.includes(graph.value)}
+                        onChange={handleGraphSelection}
+                      />
+                    ))}
+                  </>
+                )}
               </Col>
             </Form.Group>
 
@@ -295,6 +398,24 @@ const BulkDataExport = () => {
             <Form.Group as={Row} className="mb-3">
               <Form.Label column sm="3">Data Groups</Form.Label>
               <Col sm="9">
+                <div className="mb-2">
+                  <Button 
+                    variant="outline-primary" 
+                    size="sm" 
+                    onClick={() => handleSelectAllDataGroups(true)}
+                    className="me-2"
+                  >
+                    Select All
+                  </Button>
+                  <Button 
+                    variant="outline-secondary" 
+                    size="sm" 
+                    onClick={() => handleSelectAllDataGroups(false)}
+                  >
+                    Deselect All
+                  </Button>
+                </div>
+                
                 {dataGroups.map(group => (
                   <Form.Check
                     key={group.id}
@@ -324,8 +445,27 @@ const BulkDataExport = () => {
                       {dataGroups
                         .filter(group => selectedDataGroups.includes(group.id))
                         .map(group => (
-                          <div key={group.id} className="mb-3">
-                            <h6>{group.label}</h6>
+                          <div key={group.id} className="mb-4">
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                              <h6>{group.label}</h6>
+                              <div>
+                                <Button 
+                                  variant="outline-primary" 
+                                  size="sm" 
+                                  onClick={() => handleSelectAllFields(group.id, true)}
+                                  className="me-2"
+                                >
+                                  Select All
+                                </Button>
+                                <Button 
+                                  variant="outline-secondary" 
+                                  size="sm" 
+                                  onClick={() => handleSelectAllFields(group.id, false)}
+                                >
+                                  Deselect All
+                                </Button>
+                              </div>
+                            </div>
                             <Row>
                               {group.fields.map(field => (
                                 <Col sm="6" key={field.id}>
@@ -333,7 +473,8 @@ const BulkDataExport = () => {
                                     type="checkbox"
                                     id={`field-${group.id}-${field.id}`}
                                     label={`${field.label}${field.required ? ' *' : ''}`}
-                                    checked={field.required}
+                                    checked={selectedFields[group.id]?.[field.id] || false}
+                                    onChange={(e) => handleFieldSelection(group.id, field.id, e.target.checked)}
                                     disabled={field.required}
                                   />
                                 </Col>
@@ -370,7 +511,7 @@ const BulkDataExport = () => {
                 variant="primary"
                 size="lg"
                 onClick={startDataExport}
-                disabled={isSubmitting || selectedDataGroups.length === 0 || !email}
+                disabled={isSubmitting || selectedDataGroups.length === 0 || !email || !sparqlEndpoint}
               >
                 {isSubmitting ? 'Processing...' : 'Start Data Export'}
               </Button>
