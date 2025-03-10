@@ -23,14 +23,18 @@ const commonPrefixes = [
   { prefix: 'dc', uri: 'http://purl.org/dc/elements/1.1/', description: 'Dublin Core elements' },
   { prefix: 'dct', uri: 'http://purl.org/dc/terms/', description: 'Dublin Core terms' },
   { prefix: 'skos', uri: 'http://www.w3.org/2004/02/skos/core#', description: 'Simple Knowledge Organization System' },
-  { prefix: 'epo', uri: 'http://data.europa.eu/a4g/ontology#', description: 'EU Procurement Ontology' }
+  { prefix: 'epo', uri: 'http://data.europa.eu/a4g/ontology#', description: 'EU Procurement Ontology' },
+  { prefix: 'cccev', uri: 'http://data.europa.eu/m8g/', description: 'Core Criterion and Core Evidence Vocabulary' },
+  { prefix: 'locn', uri: 'http://www.w3.org/ns/locn#', description: 'ISA Location Core Vocabulary' },
+  { prefix: 'sh', uri: 'http://www.w3.org/ns/shacl#', description: 'Shapes Constraint Language' }
 ];
 
-// Common endpoint suggestions
+// Common endpoint suggestions with procurement focus
 const endpointSuggestions = [
+  { url: 'https://data.europa.eu/a4g/sparql', description: 'EU TED Data - Public procurement notices' },
   { url: 'https://dbpedia.org/sparql', description: 'DBpedia - General knowledge from Wikipedia' },
   { url: 'https://query.wikidata.org/sparql', description: 'Wikidata - Structured data from Wikimedia projects' },
-  { url: 'http://linkedgeodata.org/sparql', description: 'LinkedGeoData - Spatial data from OpenStreetMap' },
+  { url: 'https://linkedgeodata.org/sparql', description: 'LinkedGeoData - Spatial data from OpenStreetMap' },
   { url: 'https://publications.europa.eu/webapi/rdf/sparql', description: 'CELLAR - EU Publications Office Reference Data' }
 ];
 
@@ -59,6 +63,7 @@ const EnhancedSparqlEditor = ({
   const [suggestedPrefixes, setSuggestedPrefixes] = useState([]);
   const [extractedVariables, setExtractedVariables] = useState([]);
   const [showVariables, setShowVariables] = useState(false);
+  const [disableValidation, setDisableValidation] = useState(false);
   const textareaRef = useRef(null);
   
   // Handle query change
@@ -69,42 +74,55 @@ const EnhancedSparqlEditor = ({
     // Update line count for line numbers
     setLineCount((newQuery.match(/\n/g) || []).length + 1);
     
-    // Debounced validation for immediate feedback
-    if (newQuery.length > 10) {
-      const result = validateSparqlQuery(newQuery);
-      setValidationResult(result);
-      
-      // Check for performance issues
-      setPerformanceWarnings(checkPerformance(newQuery));
-      
-      // Suggest prefixes based on URIs in query
-      setSuggestedPrefixes(suggestPrefixes(newQuery));
-      
-      // Extract variables for assistance
-      setExtractedVariables(extractVariables(newQuery));
+    // Only perform validation if not disabled
+    if (!disableValidation && newQuery.length > 10) {
+      try {
+        const result = validateSparqlQuery(newQuery);
+        setValidationResult(result);
+        
+        // Check for performance issues
+        setPerformanceWarnings(checkPerformance(newQuery));
+        
+        // Suggest prefixes based on URIs in query
+        setSuggestedPrefixes(suggestPrefixes(newQuery));
+        
+        // Extract variables for assistance
+        setExtractedVariables(extractVariables(newQuery));
+      } catch (err) {
+        console.warn("Validation error:", err);
+        // Don't block the user if validation fails
+      }
     }
   };
   
   // Effect to perform initial checks when component mounts or query changes dramatically
   useEffect(() => {
     if (query) {
-      // Validate the query
-      const result = validateSparqlQuery(query);
-      setValidationResult(result);
-      
-      // Check for performance issues
-      setPerformanceWarnings(checkPerformance(query));
-      
-      // Get prefix suggestions
-      setSuggestedPrefixes(suggestPrefixes(query));
-      
-      // Extract variables
-      setExtractedVariables(extractVariables(query));
-      
-      // Update line count
-      setLineCount((query.match(/\n/g) || []).length + 1);
+      try {
+        // Update line count
+        setLineCount((query.match(/\n/g) || []).length + 1);
+        
+        // Only perform validation if not disabled
+        if (!disableValidation) {
+          // Validate the query
+          const result = validateSparqlQuery(query);
+          setValidationResult(result);
+          
+          // Check for performance issues
+          setPerformanceWarnings(checkPerformance(query));
+          
+          // Get prefix suggestions
+          setSuggestedPrefixes(suggestPrefixes(query));
+          
+          // Extract variables
+          setExtractedVariables(extractVariables(query));
+        }
+      } catch (err) {
+        console.warn("Initial validation error:", err);
+        // Don't block the user if validation fails
+      }
     }
-  }, []);
+  }, [query, disableValidation]);
 
   // Handle template selection
   const handleTemplateChange = (e) => {
@@ -116,25 +134,40 @@ const EnhancedSparqlEditor = ({
     setLineCount((templateQuery.match(/\n/g) || []).length + 1);
     
     // Validate the selected template
-    if (templateQuery) {
-      const result = validateSparqlQuery(templateQuery);
-      setValidationResult(result);
+    if (templateQuery && !disableValidation) {
+      try {
+        const result = validateSparqlQuery(templateQuery);
+        setValidationResult(result);
+      } catch (err) {
+        console.warn("Template validation error:", err);
+      }
     }
   };
 
-  // Handle execution with validation
+  // Handle execution with controlled validation
   const handleExecuteQuery = () => {
     if (!sparqlEndpoint) {
       setValidationResult({ valid: false, error: 'Please provide a SPARQL endpoint URL' });
       return;
     }
     
-    const result = validateSparqlQuery(query);
-    setValidationResult(result);
-    
-    if (result.valid) {
-      onExecute();
+    if (!disableValidation) {
+      // Perform validation before execution
+      try {
+        const result = validateSparqlQuery(query);
+        setValidationResult(result);
+        
+        if (!result.valid) {
+          return; // Don't execute if validation fails
+        }
+      } catch (err) {
+        console.warn("Execution validation error:", err);
+        // Continue with execution even if validation fails
+      }
     }
+    
+    // Execute the query regardless of validation errors if disableValidation is true
+    onExecute();
   };
 
   // Add common prefix to query
@@ -169,29 +202,46 @@ const EnhancedSparqlEditor = ({
 
   // Format the query
   const handleFormatQuery = () => {
-    const formatted = formatSparqlQuery(query);
-    setQuery(formatted);
-    setLineCount((formatted.match(/\n/g) || []).length + 1);
+    try {
+      const formatted = formatSparqlQuery(query);
+      setQuery(formatted);
+      setLineCount((formatted.match(/\n/g) || []).length + 1);
+    } catch (err) {
+      console.warn("Formatting error:", err);
+      // Don't change the query if formatting fails
+    }
   };
 
   // Add missing structure to the query
   const handleAddStructure = () => {
-    const completeQuery = addMissingStructure(query);
-    setQuery(completeQuery);
-    setLineCount((completeQuery.match(/\n/g) || []).length + 1);
-    
-    // Validate the new query
-    const result = validateSparqlQuery(completeQuery);
-    setValidationResult(result);
+    try {
+      const completeQuery = addMissingStructure(query);
+      setQuery(completeQuery);
+      setLineCount((completeQuery.match(/\n/g) || []).length + 1);
+      
+      // Validate the new query
+      if (!disableValidation) {
+        const result = validateSparqlQuery(completeQuery);
+        setValidationResult(result);
+      }
+    } catch (err) {
+      console.warn("Structure addition error:", err);
+      // Don't change the query if structure addition fails
+    }
   };
   
   // Add LIMIT if missing
   const addLimit = () => {
-    if (!query.toUpperCase().includes('LIMIT')) {
-      let updatedQuery = query.trim();
-      updatedQuery += '\nLIMIT 100';
-      setQuery(updatedQuery);
-      setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
+    try {
+      if (!query.toUpperCase().includes('LIMIT')) {
+        let updatedQuery = query.trim();
+        updatedQuery += '\nLIMIT 100';
+        setQuery(updatedQuery);
+        setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
+      }
+    } catch (err) {
+      console.warn("Limit addition error:", err);
+      // Don't change the query if limit addition fails
     }
   };
 
@@ -288,13 +338,23 @@ const EnhancedSparqlEditor = ({
           <Form.Group className="mb-3">
             <div className="d-flex justify-content-between align-items-center mb-2">
               <Form.Label>SPARQL Query</Form.Label>
-              <Button 
-                variant="outline-secondary" 
-                size="sm"
-                onClick={() => setShowVariables(!showVariables)}
-              >
-                {showVariables ? 'Hide Variables' : 'Show Variables'} ({extractedVariables.length})
-              </Button>
+              <div className="d-flex align-items-center">
+                <Form.Check 
+                  type="switch"
+                  id="disable-validation"
+                  label="Advanced Mode (disable validation)"
+                  checked={disableValidation}
+                  onChange={(e) => setDisableValidation(e.target.checked)}
+                  className="me-3"
+                />
+                <Button 
+                  variant="outline-secondary" 
+                  size="sm"
+                  onClick={() => setShowVariables(!showVariables)}
+                >
+                  {showVariables ? 'Hide Variables' : 'Show Variables'} ({extractedVariables.length})
+                </Button>
+              </div>
             </div>
             
             {showVariables && extractedVariables.length > 0 && (
@@ -361,17 +421,22 @@ const EnhancedSparqlEditor = ({
             
             <Form.Text className="text-muted mt-2">
               Use the buttons above to format your query or add common structure elements.
+              {disableValidation && (
+                <span className="text-warning ms-1">
+                  <strong>Advanced Mode:</strong> Validation is disabled for complex queries.
+                </span>
+              )}
             </Form.Text>
           </Form.Group>
 
-          {/* Validation messages */}
-          {!validationResult.valid && (
+          {/* Validation messages - only show if validation is not disabled */}
+          {!disableValidation && !validationResult.valid && (
             <Alert variant="danger" className="mt-3">
               <strong>Error:</strong> {validationResult.error}
             </Alert>
           )}
           
-          {validationResult.valid && validationResult.warnings && validationResult.warnings.length > 0 && (
+          {!disableValidation && validationResult.valid && validationResult.warnings && validationResult.warnings.length > 0 && (
             <Alert variant="warning" className="mt-3">
               <strong>Syntax Warnings:</strong>
               <ul className="mb-0">
@@ -382,8 +447,8 @@ const EnhancedSparqlEditor = ({
             </Alert>
           )}
           
-          {/* Performance warnings */}
-          {performanceWarnings.length > 0 && (
+          {/* Performance warnings - only show if validation is not disabled */}
+          {!disableValidation && performanceWarnings.length > 0 && (
             <Alert variant="info" className="mt-3">
               <strong>Performance Recommendations:</strong>
               <ul className="mb-0">
@@ -398,7 +463,7 @@ const EnhancedSparqlEditor = ({
             <Button 
               variant="primary" 
               onClick={handleExecuteQuery} 
-              disabled={isLoading || !sparqlEndpoint || !validationResult.valid}
+              disabled={isLoading || !sparqlEndpoint || (!disableValidation && !validationResult.valid)}
               className="px-4"
             >
               {isLoading ? (
