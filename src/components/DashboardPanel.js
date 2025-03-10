@@ -1,4 +1,3 @@
-// src/components/DashboardPanel.js - Fixed version
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Button, Spinner, Table, OverlayTrigger, Tooltip, Dropdown } from 'react-bootstrap';
 import Plot from 'react-plotly.js';
@@ -155,21 +154,71 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
   // Render different content based on panel type
   const renderPanelContent = () => {
     // Add defensive coding to catch any rendering errors
-  try {
-    if (loading && !data) {
-      return (
-        <div className="text-center p-5">
-          <Spinner animation="border" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </Spinner>
-        </div>
-      );
-    }
-    
-    if (error) {
+    try {
+      if (loading && !data) {
+        return (
+          <div className="text-center p-5">
+            <Spinner animation="border" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </Spinner>
+          </div>
+        );
+      }
+      
+      if (error) {
+        return (
+          <div className="alert alert-danger">
+            <strong>Error:</strong> {error}
+            <div className="mt-2">
+              <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
+                Retry
+              </Button>
+            </div>
+          </div>
+        );
+      }
+      
+      if (!data || !data.data || data.data.length === 0) {
+        return (
+          <div className="alert alert-warning">
+            <strong>No data available</strong>
+            <p>The query returned no results or hasn't been executed yet. Click refresh to execute the query.</p>
+            <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
+              Refresh Data
+            </Button>
+          </div>
+        );
+      }
+      
+      switch (panel.type) {
+        case 'table':
+          return renderTable();
+        case 'line':
+          return renderLineChart();
+        case 'bar':
+          return renderBarChart();
+        case 'pie':
+          return renderPieChart();
+        case 'scatter':
+          return renderScatterPlot();
+        case 'stats':
+          return renderStats();
+        default:
+          return (
+            <div className="alert alert-info">
+              <strong>Panel type:</strong> {panel.type}
+              <p>This panel is configured but the visualization hasn't been loaded yet. Click refresh to load the data.</p>
+              <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
+                Load Data
+              </Button>
+            </div>
+          );
+      }
+    } catch (err) {
+      console.error("Error rendering panel content:", err);
       return (
         <div className="alert alert-danger">
-          <strong>Error:</strong> {error}
+          <strong>Rendering Error:</strong> {err.message}
           <div className="mt-2">
             <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
               Retry
@@ -178,61 +227,7 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
         </div>
       );
     }
-    
-    if (!data || !data.data || data.data.length === 0) {
-      return (
-        <div className="alert alert-warning">
-          <strong>No data available</strong>
-          <p>The query returned no results or hasn't been executed yet. Click refresh to execute the query.</p>
-          <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
-            Refresh Data
-          </Button>
-        </div>
-      );
-    }
-    
-    switch (panel.type) {
-      case 'table':
-        return renderTable();
-      case 'line':
-        return renderLineChart();
-      case 'bar':
-        return renderBarChart();
-      case 'pie':
-        return renderPieChart();
-      case 'scatter':
-        return renderScatterPlot();
-      case 'bubble':
-        return renderBubbleChart();
-      case 'network':
-        return renderNetworkGraph();
-      case 'stats':
-        return renderStats();
-      default:
-        return (
-          <div className="alert alert-info">
-            <strong>Panel type:</strong> {panel.type}
-            <p>This panel is configured but the visualization hasn't been loaded yet. Click refresh to load the data.</p>
-            <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
-              Load Data
-            </Button>
-          </div>
-        );
-    }
-  } catch (err) {
-    console.error("Error rendering panel content:", err);
-    return (
-      <div className="alert alert-danger">
-        <strong>Rendering Error:</strong> {err.message}
-        <div className="mt-2">
-          <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
-};
+  };
   
   // Render a table
   const renderTable = () => {
@@ -568,16 +563,6 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
     );
   };
   
-  // Render bubble chart (simplified version)
-  const renderBubbleChart = () => {
-    return <div className="alert alert-info">Bubble chart visualization</div>;
-  };
-  
-  // Render network graph (simplified version)
-  const renderNetworkGraph = () => {
-    return <div className="alert alert-info">Network graph visualization</div>;
-  };
-  
   // Render statistics
   const renderStats = () => {
     // For stats, choose the first numeric column
@@ -688,7 +673,7 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
   
   return (
     <Card className="dashboard-panel h-100" ref={panelRef}>
-      <Card.Header className="d-flex justify-content-between align-items-center panel-drag-handle">
+      <Card.Header className="d-flex justify-content-between align-items-center">
         <div className="d-flex align-items-center">
           <h6 className="mb-0 me-2">{panel.title}</h6>
           {isRefreshing && (
@@ -723,7 +708,7 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
               <Dropdown.Item onClick={toggleFullScreen}>
                 {fullScreenMode ? 'Exit Full Screen' : 'Full Screen'}
               </Dropdown.Item>
-              <Dropdown.Item onClick={exportChart} disabled={!['line', 'bar', 'pie', 'scatter', 'bubble'].includes(panel.type) || !plotRef.current}>
+              <Dropdown.Item onClick={exportChart} disabled={!['line', 'bar', 'pie', 'scatter'].includes(panel.type) || !plotRef.current}>
                 Export as Image
               </Dropdown.Item>
               <Dropdown.Divider />
