@@ -1,93 +1,139 @@
-// Add these imports at the top with your other imports
-import React, { useState, useEffect } from 'react';
-import QueryHistory from './QueryHistory';
-import Dashboard from './Dashboard';
+import React, { useState } from 'react';
+import { Container, Row, Col, Nav, Tab } from 'react-bootstrap';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import Header from './Header';
+import QueryEditor from './QueryEditor';
+import ResultsTable from './ResultsTable';
+import Visualization from './Visualization';
+import RegressionAnalysis from './RegressionAnalysis';
+import DataOperations from './DataOperations'; // Import the new component
+import ExportOptions from './ExportOptions';
+import BulkDataExport from './BulkDataExport';
+import { executeQuery, isValidSparql } from '../api/sparqlService';
 
 function App() {
-  // Your existing state variables...
+  // State for query and results
+  const [sparqlEndpoint, setSparqlEndpoint] = useState('');
+  const [query, setQuery] = useState('');
+  const [queryResults, setQueryResults] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('sparql-query');
   
-  // Add these new state variables for queries and dashboards
-  const [savedQueries, setSavedQueries] = useState(() => {
-    // Load from localStorage if available
-    try {
-      const saved = localStorage.getItem('sparqlQueries');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error('Error loading saved queries:', e);
-      return [];
+  // Function to handle query execution
+  const handleExecuteQuery = async () => {
+    if (!sparqlEndpoint) {
+      setError('Please provide a SPARQL endpoint URL');
+      return;
     }
-  });
-
-  const [dashboards, setDashboards] = useState(() => {
-    // Load from localStorage if available
-    try {
-      const saved = localStorage.getItem('sparqlDashboards');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error('Error loading dashboards:', e);
-      return [];
+    
+    if (!isValidSparql(query)) {
+      setError('The SPARQL query seems to be invalid. Please check the syntax.');
+      return;
     }
-  });
-
-  // Add functions to manage queries
-  const saveQuery = (name = '') => {
-    if (!queryResults) return;
     
-    const newQuery = {
-      id: Date.now().toString(),
-      name: name || `Query ${savedQueries.length + 1}`,
-      endpoint: sparqlEndpoint,
-      query: query,
-      timestamp: new Date().toISOString(),
-      resultCount: queryResults.data.length,
-      executionTime: queryResults.executionTime,
-      bookmarked: false
-    };
+    setIsLoading(true);
+    setError(null);
     
-    const updatedQueries = [newQuery, ...savedQueries];
-    setSavedQueries(updatedQueries);
-    localStorage.setItem('sparqlQueries', JSON.stringify(updatedQueries));
+    try {
+      const result = await executeQuery(sparqlEndpoint, query);
+      
+      if (result.success) {
+        setQueryResults(result);
+        if (result.data.length === 0) {
+          setError('No results found.');
+        }
+      } else {
+        setError(`An error occurred during query execution: ${result.error}`);
+      }
+    } catch (err) {
+      setError(`Failed to execute query: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
+  
+  return (
+    <div className="App">
+      <Header />
+      <Container fluid>
+        <Tab.Container activeKey={activeTab} onSelect={(key) => setActiveTab(key)}>
+          <Row className="mt-3 mb-3">
+            <Col>
+              <Nav variant="tabs">
+                <Nav.Item>
+                  <Nav.Link eventKey="sparql-query">SPARQL Query</Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link eventKey="bulk-export">Bulk Data Export</Nav.Link>
+                </Nav.Item>
+              </Nav>
+            </Col>
+          </Row>
+          
+          <Row>
+            <Col>
+              <Tab.Content>
+                <Tab.Pane eventKey="sparql-query">
+                  <QueryEditor 
+                    sparqlEndpoint={sparqlEndpoint}
+                    setSparqlEndpoint={setSparqlEndpoint}
+                    query={query}
+                    setQuery={setQuery}
+                    onExecute={handleExecuteQuery}
+                    isLoading={isLoading}
+                  />
+                  
+                  {error && (
+                    <div className="alert alert-danger mt-3" role="alert">
+                      {error}
+                    </div>
+                  )}
+                  
+                  {queryResults && queryResults.data.length > 0 && (
+                    <>
+                      <div className="alert alert-success mt-3" role="alert">
+                        Query executed successfully, retrieved {queryResults.data.length} results in {queryResults.executionTime.toFixed(2)} seconds.
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h3>Results</h3>
+                        <ResultsTable data={queryResults.data} columns={queryResults.columns} />
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h3>Data Operations</h3>
+                        <DataOperations data={queryResults.data} columns={queryResults.columns} />
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h3>Data Visualization</h3>
+                        <Visualization data={queryResults.data} columns={queryResults.columns} />
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h3>Regression Analysis</h3>
+                        <RegressionAnalysis data={queryResults.data} columns={queryResults.columns} />
+                      </div>
+                      
+                      <div className="mt-4 mb-5">
+                        <h3>Export Results</h3>
+                        <ExportOptions data={queryResults.data} columns={queryResults.columns} />
+                      </div>
+                    </>
+                  )}
+                </Tab.Pane>
+                
+                <Tab.Pane eventKey="bulk-export">
+                  <BulkDataExport />
+                </Tab.Pane>
+              </Tab.Content>
+            </Col>
+          </Row>
+        </Tab.Container>
+      </Container>
+    </div>
+  );
+}
 
-  const handleLoadQuery = (query) => {
-    setSparqlEndpoint(query.endpoint);
-    setQuery(query.query);
-    
-    // Switch to the query tab
-    setActiveTab('sparql-query');
-  };
-
-  const handleDeleteQuery = (queryId) => {
-    const updatedQueries = savedQueries.filter(q => q.id !== queryId);
-    setSavedQueries(updatedQueries);
-    localStorage.setItem('sparqlQueries', JSON.stringify(updatedQueries));
-  };
-
-  const handleBookmarkQuery = (queryId) => {
-    const updatedQueries = savedQueries.map(q => 
-      q.id === queryId ? { ...q, bookmarked: !q.bookmarked } : q
-    );
-    setSavedQueries(updatedQueries);
-    localStorage.setItem('sparqlQueries', JSON.stringify(updatedQueries));
-  };
-
-  // Add functions to manage dashboards
-  const handleCreateDashboard = (dashboard) => {
-    const updatedDashboards = [dashboard, ...dashboards];
-    setDashboards(updatedDashboards);
-    localStorage.setItem('sparqlDashboards', JSON.stringify(updatedDashboards));
-  };
-
-  const handleUpdateDashboard = (updatedDashboard) => {
-    const newDashboards = dashboards.map(d => 
-      d.id === updatedDashboard.id ? updatedDashboard : d
-    );
-    setDashboards(newDashboards);
-    localStorage.setItem('sparqlDashboards', JSON.stringify(newDashboards));
-  };
-
-  const handleDeleteDashboard = (dashboardId) => {
-    const newDashboards = dashboards.filter(d => d.id !== dashboardId);
-    setDashboards(newDashboards);
-    localStorage.setItem('sparqlDashboards', JSON.stringify(newDashboards));
-  };
+export default App;
