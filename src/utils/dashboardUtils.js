@@ -214,6 +214,23 @@ export const scheduleDashboardRefresh = (dashboardId, intervalMinutes) => {
   return true;
 };
 
+
+// Delete a panel from a dashboard
+export const deletePanel = (dashboardId, panelId) => {
+  const dashboard = getDashboardById(dashboardId);
+  
+  if (!dashboard) {
+    return false;
+  }
+  
+  // Filter out the panel to delete
+  dashboard.panels = dashboard.panels.filter(panel => panel.id !== panelId);
+  
+  // Save the updated dashboard
+  return saveDashboard(dashboard);
+};
+
+
 // Export dashboard to JSON file
 export const exportDashboard = (dashboardId) => {
   const dashboard = getDashboardById(dashboardId);
