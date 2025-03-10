@@ -155,6 +155,7 @@ WHERE {
         }   
     } 
     FILTER(!BOUND(?countFrameworkAgreement) or ?countFrameworkAgreement=0)
-} GROUP BY ?countryCode;
+} GROUP BY ?countryCode`
+};
 
 export default queryTemplates;
