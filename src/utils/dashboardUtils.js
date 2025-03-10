@@ -143,7 +143,7 @@ export const createPanel = (
   type, 
   query, 
   visualization, 
-  position = { x: 0, y: 0, w: 6, h: 4 }
+  position = null
 ) => {
   const dashboard = getDashboardById(dashboardId);
   
@@ -153,11 +153,27 @@ export const createPanel = (
   
   const panelId = `panel-${uuidv4()}`;
   
+  // Determine the best position for the new panel
+  // Find the lowest point in the dashboard
+  let maxY = 0;
+  if (dashboard.panels && dashboard.panels.length > 0) {
+    dashboard.panels.forEach(existingPanel => {
+      const panelPosition = existingPanel.position || { y: 0, h: 4 };
+      const panelBottom = panelPosition.y + panelPosition.h;
+      if (panelBottom > maxY) {
+        maxY = panelBottom;
+      }
+    });
+  }
+  
+  // Use provided position or create a position below existing panels
+  const finalPosition = position || { x: 0, y: maxY, w: 12, h: 4 };
+  
   const panel = {
     id: panelId,
     title,
     type,
-    position,
+    position: finalPosition,
     query,
     visualization
   };
@@ -166,58 +182,6 @@ export const createPanel = (
   saveDashboard(dashboard);
   
   return panel;
-};
-
-// Update panel position
-export const updatePanelPosition = (dashboardId, panelId, position) => {
-  const dashboard = getDashboardById(dashboardId);
-  
-  if (!dashboard) {
-    return false;
-  }
-  
-  const panelIndex = dashboard.panels.findIndex(p => p.id === panelId);
-  
-  if (panelIndex === -1) {
-    return false;
-  }
-  
-  dashboard.panels[panelIndex].position = {...position};
-  return saveDashboard(dashboard);
-};
-
-// Delete a panel
-export const deletePanel = (dashboardId, panelId) => {
-  const dashboard = getDashboardById(dashboardId);
-  
-  if (!dashboard) {
-    return false;
-  }
-  
-  dashboard.panels = dashboard.panels.filter(p => p.id !== panelId);
-  return saveDashboard(dashboard);
-};
-
-// Update panel configuration
-export const updatePanel = (dashboardId, panelId, updates) => {
-  const dashboard = getDashboardById(dashboardId);
-  
-  if (!dashboard) {
-    return false;
-  }
-  
-  const panelIndex = dashboard.panels.findIndex(p => p.id === panelId);
-  
-  if (panelIndex === -1) {
-    return false;
-  }
-  
-  dashboard.panels[panelIndex] = {
-    ...dashboard.panels[panelIndex],
-    ...updates
-  };
-  
-  return saveDashboard(dashboard);
 };
 
 // Schedule automatic dashboard refresh
