@@ -3,36 +3,30 @@ import { Card, Form, Button, Row, Col, Table, Alert, Tabs, Tab } from 'react-boo
 import * as ss from 'simple-statistics';
 import _ from 'lodash';
 
-/**
- * Enhanced DataOperations component with group-by and advanced statistics
- * 
- * @param {Array} data - Array of data rows
- * @param {Array} columns - Array of column names
- */
 const DataOperations = ({ data, columns }) => {
-  // Basic state
+  // This keeps track of which tab is active (basic, groupby, stats)
   const [activeTab, setActiveTab] = useState('basic');
   const [error, setError] = useState(null);
   
-  // Basic operations state
+  // For the basic operations tab
   const [selectedOperation, setSelectedOperation] = useState('sum');
   const [selectedColumn, setSelectedColumn] = useState(columns[0] || '');
   const [operationResult, setOperationResult] = useState(null);
   const [excludeNA, setExcludeNA] = useState(true);
   
-  // Group by operations state
+  // For the group by operations tab
   const [groupByColumn, setGroupByColumn] = useState(columns[0] || '');
   const [groupByMetricColumn, setGroupByMetricColumn] = useState(columns.length > 1 ? columns[1] : columns[0] || '');
   const [groupByOperation, setGroupByOperation] = useState('sum');
   const [groupByResult, setGroupByResult] = useState(null);
   const [groupByExcludeNA, setGroupByExcludeNA] = useState(true);
   
-  // Advanced statistics state
+  // For the advanced statistics tab
   const [statsColumn, setStatsColumn] = useState(columns[0] || '');
   const [statsResult, setStatsResult] = useState(null);
   const [statsExcludeNA, setStatsExcludeNA] = useState(true);
   
-  // Available operations
+  // List of available operations
   const operations = [
     { value: 'sum', label: 'Sum' },
     { value: 'avg', label: 'Average' },
@@ -43,9 +37,7 @@ const DataOperations = ({ data, columns }) => {
     { value: 'mode', label: 'Mode' }
   ];
 
-  /**
-   * Extract and process column values
-   */
+  // Helper function to get values from a column
   const extractColumnValues = (columnName, excludeNAValues = true) => {
     if (!columnName) {
       throw new Error('Column name is required');
@@ -56,32 +48,30 @@ const DataOperations = ({ data, columns }) => {
       throw new Error(`Column ${columnName} not found`);
     }
     
-    // Extract values from the selected column
+    // Get all the values from this column
     let values = data.map(row => row[columnIndex]);
     
-    // Process values - convert to numbers and handle NA values
+    // Clean up the values - convert to numbers when possible
     values = values.map(val => {
-      // Check if the value is empty, null, 'NA', 'N/A', etc.
+      // Check if value is empty or NA
       if (val === null || val === undefined || val === '' || 
           val === 'NA' || val === 'N/A' || val === 'null' || 
           val === 'undefined' || val === 'NaN') {
         return NaN;
       }
       
-      // Try to convert to number
+      // Convert to number if possible
       const num = Number(val);
       return isNaN(num) ? val : num;
     });
     
-    // If excludeNA is true, filter out all NaN values
+    // Remove NA values if requested
     return excludeNAValues 
       ? values.filter(val => typeof val === 'number' && !isNaN(val) || typeof val === 'string' && val !== '')
       : values;
   }
 
-  /**
-   * Calculate statistics for a numeric array
-   */
+  // Calculate various statistics for a set of values
   const calculateStats = (values) => {
     const numericValues = values.filter(val => typeof val === 'number' && !isNaN(val));
     
@@ -89,7 +79,7 @@ const DataOperations = ({ data, columns }) => {
       throw new Error('No numeric values found for statistical calculations');
     }
     
-    // Sort numeric values for percentile calculations
+    // Sort values for percentile calculations
     const sortedValues = [...numericValues].sort((a, b) => a - b);
     
     return {
@@ -105,14 +95,11 @@ const DataOperations = ({ data, columns }) => {
       percentile25: ss.quantile(sortedValues, 0.25),
       percentile75: ss.quantile(sortedValues, 0.75),
       mode: ss.mode(numericValues),
-      // Add interquartile range
       iqr: ss.quantile(sortedValues, 0.75) - ss.quantile(sortedValues, 0.25)
     };
   }
 
-  /**
-   * Perform operation on array of values
-   */
+  // Perform a specific operation on a set of values
   const performOperation = (operation, values) => {
     const numericValues = values.filter(val => typeof val === 'number' && !isNaN(val));
     
@@ -151,9 +138,7 @@ const DataOperations = ({ data, columns }) => {
     }
   }
 
-  /**
-   * Handle basic operation execution
-   */
+  // Handle basic operation calculation
   const handleCalculate = () => {
     if (!selectedColumn) {
       setError('Please select a column');
@@ -161,19 +146,15 @@ const DataOperations = ({ data, columns }) => {
     }
     
     try {
-      // Extract and process values
+      // Get and process values
       const values = extractColumnValues(selectedColumn, excludeNA);
       
-      // Count of all values
+      // Count values
       const totalCount = data.length;
-      
-      // Count of valid values
       const validCount = values.length;
-      
-      // Count of NA values
       const naCount = totalCount - validCount;
       
-      // Execute the selected operation
+      // Do the calculation
       const result = performOperation(selectedOperation, values);
       const resultLabel = operations.find(op => op.value === selectedOperation)?.label || selectedOperation;
       
@@ -192,9 +173,7 @@ const DataOperations = ({ data, columns }) => {
     }
   };
 
-  /**
-   * Handle group by operation execution
-   */
+  // Handle group by operation calculation
   const handleGroupByCalculate = () => {
     if (!groupByColumn || !groupByMetricColumn) {
       setError('Please select both group by column and metric column');
@@ -202,7 +181,7 @@ const DataOperations = ({ data, columns }) => {
     }
     
     try {
-      // Extract column indices
+      // Get column positions
       const groupColumnIndex = columns.indexOf(groupByColumn);
       const metricColumnIndex = columns.indexOf(groupByMetricColumn);
       
@@ -216,43 +195,43 @@ const DataOperations = ({ data, columns }) => {
         return value === null || value === undefined || value === '' ? 'NA' : value;
       });
       
-      // Calculate the selected operation for each group
+      // Calculate the operation for each group
       const result = {};
       let grandTotal = 0;
       
       Object.entries(groupedData).forEach(([groupValue, rows]) => {
-        // Skip NA group if excludeNA is true
+        // Skip NA group if requested
         if (groupByExcludeNA && groupValue === 'NA') {
           return;
         }
         
-        // Extract metric values for this group
+        // Get metric values for this group
         const metricValues = rows.map(row => {
           const val = row[metricColumnIndex];
           
-          // Check if the value is NA
+          // Check if value is NA
           if (val === null || val === undefined || val === '' || 
               val === 'NA' || val === 'N/A' || val === 'null' || 
               val === 'undefined' || val === 'NaN') {
             return NaN;
           }
           
-          // Try to convert to number
+          // Convert to number if possible
           const num = Number(val);
           return isNaN(num) ? val : num;
         });
         
-        // Filter out NA values if exclude flag is set
+        // Remove NA values if requested
         const validValues = groupByExcludeNA 
           ? metricValues.filter(val => typeof val === 'number' && !isNaN(val))
           : metricValues;
         
-        // Calculate operation result
+        // Do the calculation
         let operationResult;
         try {
           operationResult = performOperation(groupByOperation, validValues);
           
-          // Add to grand total for applicable operations
+          // Add to grand total for sum and count operations
           if (['sum', 'count'].includes(groupByOperation)) {
             grandTotal += operationResult;
           }
@@ -283,9 +262,7 @@ const DataOperations = ({ data, columns }) => {
     }
   };
 
-  /**
-   * Handle advanced statistics calculation
-   */
+  // Handle advanced statistics calculation
   const handleCalculateStats = () => {
     if (!statsColumn) {
       setError('Please select a column for statistics');
@@ -293,16 +270,12 @@ const DataOperations = ({ data, columns }) => {
     }
     
     try {
-      // Extract and process values
+      // Get and process values
       const values = extractColumnValues(statsColumn, statsExcludeNA);
       
-      // Count of all values
+      // Count values
       const totalCount = data.length;
-      
-      // Count of valid values
       const validCount = values.length;
-      
-      // Count of NA values
       const naCount = totalCount - validCount;
       
       // Calculate statistics
