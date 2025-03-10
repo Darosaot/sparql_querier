@@ -1,3 +1,5 @@
+// src/api/sparqlService.js - Updated with enhanced validation
+
 import axios from 'axios';
 
 /**
@@ -113,12 +115,116 @@ export const executeQuery = async (endpoint, query) => {
 };
 
 /**
- * Validates if a SPARQL query contains required keywords
+ * Enhanced validation function for SPARQL queries
+ * Checks for required keywords and structure
  * 
  * @param {string} query - The SPARQL query to validate
  * @returns {boolean} - True if the query is valid
  */
 export const isValidSparql = (query) => {
-  const requiredKeywords = ['SELECT', 'WHERE', '{', '}'];
-  return requiredKeywords.every(keyword => query.includes(keyword));
+  if (!query || query.trim() === '') {
+    return false;
+  }
+  
+  const upperQuery = query.toUpperCase();
+  
+  // Check for query type
+  const hasQueryType = /\b(SELECT|ASK|CONSTRUCT|DESCRIBE)\b/i.test(query);
+  if (!hasQueryType) {
+    return false;
+  }
+  
+  // Check for WHERE clause (required for SELECT, ASK, CONSTRUCT)
+  if (/\b(SELECT|ASK|CONSTRUCT)\b/i.test(query) && !upperQuery.includes('WHERE')) {
+    return false;
+  }
+  
+  // Check for balanced braces
+  const openBraces = (query.match(/\{/g) || []).length;
+  const closeBraces = (query.match(/\}/g) || []).length;
+  if (openBraces !== closeBraces) {
+    return false;
+  }
+  
+  // Check for unclosed quotes
+  const doubleQuotes = (query.match(/"/g) || []).length;
+  if (doubleQuotes % 2 !== 0) {
+    return false;
+  }
+  
+  const singleQuotes = (query.match(/'/g) || []).length;
+  if (singleQuotes % 2 !== 0) {
+    return false;
+  }
+  
+  // Check for basic triplet structure in WHERE clause
+  if (upperQuery.includes('WHERE')) {
+    const whereMatch = query.match(/WHERE\s*\{([^}]*)\}/i);
+    if (whereMatch) {
+      const whereClause = whereMatch[1].trim();
+      if (whereClause === '') {
+        return false; // Empty WHERE clause
+      }
+    }
+  }
+  
+  return true;
+};
+
+/**
+ * Get information about SPARQL endpoint capabilities
+ * Attempts to determine supported features by querying the endpoint
+ * 
+ * @param {string} endpoint - The SPARQL endpoint URL
+ * @returns {Promise} - Promise resolving to endpoint capabilities
+ */
+export const getEndpointCapabilities = async (endpoint) => {
+  try {
+    // Test if the endpoint supports ASK queries
+    const askTest = await axios.post(endpoint,
+      new URLSearchParams({
+        query: 'ASK { ?s ?p ?o . }'
+      }),
+      {
+        headers: {
+          'Accept': 'application/sparql-results+json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        timeout: 5000
+      }
+    );
+    
+    // Test if the endpoint supports aggregates (COUNT)
+    const aggregateTest = await axios.post(endpoint,
+      new URLSearchParams({
+        query: 'SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o . } LIMIT 1'
+      }),
+      {
+        headers: {
+          'Accept': 'application/sparql-results+json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        timeout: 5000
+      }
+    );
+    
+    return {
+      success: true,
+      capabilities: {
+        supportsAsk: true,
+        supportsAggregates: aggregateTest.status === 200,
+        supportsFederatedQueries: false // Would need more testing
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      capabilities: {
+        supportsAsk: false,
+        supportsAggregates: false,
+        supportsFederatedQueries: false
+      },
+      error: error.message
+    };
+  }
 };
