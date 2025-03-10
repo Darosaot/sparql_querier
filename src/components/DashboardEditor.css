@@ -132,3 +132,34 @@
   max-height: 70vh;
   overflow-y: auto;
 }
+
+/* Ensure grid and panels are always visible */
+.grid-stack {
+  background: #f8f9fa;
+  min-height: 500px !important;
+  position: relative !important;
+  width: 100% !important;
+  display: block !important;
+  visibility: visible !important;
+}
+
+.grid-stack-item {
+  min-height: 100px !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* Make sure panels with same coordinates are stacked vertically instead of on top of each other */
+.grid-stack:not(.grid-stack-initialized) .grid-stack-item {
+  position: relative !important;
+  margin-bottom: 15px;
+}
+
+/* Add styles for empty dashboard state */
+.dashboard-empty-state {
+  padding: 40px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #ccc;
+}
