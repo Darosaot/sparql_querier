@@ -1,6 +1,9 @@
 // src/utils/dashboardUtils.js
 import { v4 as uuidv4 } from 'uuid';
 
+// Map to track scheduled refreshes
+const scheduledRefreshes = new Map();
+
 // Enhanced logging utility
 const logger = {
   log: (message, ...args) => {
