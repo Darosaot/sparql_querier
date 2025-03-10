@@ -1,10 +1,9 @@
-// src/components/DashboardList.js
-import React, { useState, useEffect } from 'react';
-import { Card, Button, Table, Modal, Form, InputGroup } from 'react-bootstrap';
-import { getDashboards, createDashboard, deleteDashboard, exportDashboard, importDashboard } from '../utils/dashboardUtils';
+// src/components/DashboardList.js - Fixed version
+import React, { useState } from 'react';
+import { Card, Button, Table, Modal, Form, InputGroup, Alert, Badge } from 'react-bootstrap';
+import { createDashboard, deleteDashboard, exportDashboard, importDashboard } from '../utils/dashboardUtils';
 
-const DashboardList = ({ onSelectDashboard }) => {
-  const [dashboards, setDashboards] = useState([]);
+const DashboardList = ({ dashboards = [], onSelectDashboard, onDashboardsChanged }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [newDashboardName, setNewDashboardName] = useState('');
@@ -13,32 +12,8 @@ const DashboardList = ({ onSelectDashboard }) => {
   const [importFile, setImportFile] = useState(null);
   const [error, setError] = useState(null);
   const [importError, setImportError] = useState(null);
-  
-  // Load dashboards from localStorage when component mounts
-  useEffect(() => {
-    loadDashboards();
-  }, []);
-  
-  // Load dashboards from storage
-  const loadDashboards = () => {
-    try {
-      console.log('DashboardList: Attempting to load dashboards');
-      const loadedDashboards = getDashboards();
-      
-      console.log('DashboardList: Loaded dashboards', loadedDashboards);
-      
-      if (loadedDashboards.length === 0) {
-        console.warn('No dashboards found in storage');
-        setError('No dashboards available. Create your first dashboard!');
-      }
-      
-      setDashboards(loadedDashboards);
-      setError(null);
-    } catch (err) {
-      console.error('Error loading dashboards:', err);
-      setError('Failed to load dashboards. Please check your browser storage.');
-    }
-  };
+  const [isCreating, setIsCreating] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   
   // Filter dashboards based on search term
   const filteredDashboards = dashboards.filter(dashboard => 
@@ -48,45 +23,70 @@ const DashboardList = ({ onSelectDashboard }) => {
   
   // Handle creating a new dashboard
   const handleCreateDashboard = () => {
-    console.log('Creating dashboard with name:', newDashboardName);
-    
+    // Validate input
     if (!newDashboardName.trim()) {
       setError('Dashboard name is required');
       return;
     }
     
+    setIsCreating(true);
+    setError(null);
+    
     try {
+      console.log('Creating dashboard with name:', newDashboardName);
       const dashboard = createDashboard(newDashboardName, newDashboardDescription);
       
-      console.log('Created dashboard:', dashboard);
-      
       if (dashboard) {
-        loadDashboards();
+        console.log('Created dashboard:', dashboard.id);
+        
+        // Close modal and reset form
         setShowCreateModal(false);
         setNewDashboardName('');
         setNewDashboardDescription('');
-        setError(null);
         
-        // Automatically select the newly created dashboard
-        onSelectDashboard(dashboard.id);
+        // Notify parent about the change
+        if (onDashboardsChanged) {
+          onDashboardsChanged();
+        }
+        
+        // Select the newly created dashboard
+        if (onSelectDashboard) {
+          // Small delay to ensure the dashboard is properly saved before selection
+          setTimeout(() => {
+            onSelectDashboard(dashboard.id);
+          }, 100);
+        }
       } else {
         throw new Error('Failed to create dashboard');
       }
     } catch (err) {
       console.error('Dashboard creation error:', err);
       setError('Failed to create dashboard. Please try again.');
+    } finally {
+      setIsCreating(false);
     }
   };
   
   // Handle deleting a dashboard
   const handleDeleteDashboard = (dashboardId) => {
+    if (!dashboardId) {
+      setError('Cannot delete: Invalid dashboard ID');
+      return;
+    }
+    
     console.log(`Attempting to delete dashboard: ${dashboardId}`);
     
     if (window.confirm('Are you sure you want to delete this dashboard?')) {
       try {
-        if (deleteDashboard(dashboardId)) {
+        const result = deleteDashboard(dashboardId);
+        
+        if (result) {
           console.log(`Dashboard ${dashboardId} deleted successfully`);
-          loadDashboards();
+          
+          // Notify parent about the change
+          if (onDashboardsChanged) {
+            onDashboardsChanged();
+          }
         } else {
           throw new Error('Dashboard deletion failed');
         }
@@ -99,28 +99,42 @@ const DashboardList = ({ onSelectDashboard }) => {
   
   // Handle importing a dashboard
   const handleImportDashboard = async () => {
-    console.log('Attempting to import dashboard');
-    
+    // Validate input
     if (!importFile) {
       setImportError('Please select a file to import');
       return;
     }
     
+    setIsImporting(true);
+    setImportError(null);
+    
     try {
+      console.log('Attempting to import dashboard from file:', importFile.name);
       const importedDashboard = await importDashboard(importFile);
       
-      console.log('Imported dashboard:', importedDashboard);
+      console.log('Imported dashboard:', importedDashboard.id);
       
-      loadDashboards();
+      // Close modal and reset form
       setShowImportModal(false);
       setImportFile(null);
-      setImportError(null);
       
-      // Automatically select the imported dashboard
-      onSelectDashboard(importedDashboard.id);
+      // Notify parent about the change
+      if (onDashboardsChanged) {
+        onDashboardsChanged();
+      }
+      
+      // Select the imported dashboard
+      if (onSelectDashboard) {
+        // Small delay to ensure the dashboard is properly saved before selection
+        setTimeout(() => {
+          onSelectDashboard(importedDashboard.id);
+        }, 100);
+      }
     } catch (error) {
       console.error('Dashboard import error:', error);
       setImportError(error.message || 'Failed to import dashboard');
+    } finally {
+      setIsImporting(false);
     }
   };
   
@@ -133,14 +147,30 @@ const DashboardList = ({ onSelectDashboard }) => {
     }
   };
   
+  // Handle exporting a dashboard
+  const handleExportDashboard = (dashboardId) => {
+    if (!dashboardId) {
+      setError('Cannot export: Invalid dashboard ID');
+      return;
+    }
+    
+    try {
+      console.log(`Exporting dashboard: ${dashboardId}`);
+      exportDashboard(dashboardId);
+    } catch (err) {
+      console.error('Dashboard export error:', err);
+      setError('Failed to export dashboard. Please try again.');
+    }
+  };
+  
   return (
     <Card>
       <Card.Header as="h5">Dashboards</Card.Header>
       <Card.Body>
         {error && (
-          <div className="alert alert-danger mb-3">
+          <Alert variant="danger" dismissible onClose={() => setError(null)} className="mb-3">
             {error}
-          </div>
+          </Alert>
         )}
         
         <div className="d-flex justify-content-between align-items-center mb-3">
@@ -166,64 +196,105 @@ const DashboardList = ({ onSelectDashboard }) => {
         {dashboards.length === 0 ? (
           <div className="text-center p-5">
             <p className="text-muted">No dashboards found. Create your first dashboard to get started.</p>
+            <Button 
+              variant="primary" 
+              onClick={() => setShowCreateModal(true)}
+              className="mt-2"
+            >
+              Create Your First Dashboard
+            </Button>
           </div>
         ) : filteredDashboards.length === 0 ? (
           <div className="text-center p-5">
             <p className="text-muted">No dashboards match your search.</p>
+            <Button 
+              variant="outline-secondary" 
+              onClick={() => setSearchTerm('')}
+              className="mt-2"
+            >
+              Clear Search
+            </Button>
           </div>
         ) : (
-          <Table hover responsive>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Created</th>
-                <th>Last Modified</th>
-                <th>Panels</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredDashboards.map(dashboard => (
-                <tr key={dashboard.id}>
-                  <td>{dashboard.name}</td>
-                  <td>{dashboard.description}</td>
-                  <td>{new Date(dashboard.dateCreated).toLocaleDateString()}</td>
-                  <td>{new Date(dashboard.dateModified).toLocaleDateString()}</td>
-                  <td>{dashboard.panels.length}</td>
-                  <td>
-                    <div className="d-flex gap-2">
-                      <Button 
-                        variant="outline-primary" 
-                        size="sm"
-                        onClick={() => {
-                          console.log(`Selecting dashboard: ${dashboard.id}`);
-                          onSelectDashboard(dashboard.id);
-                        }}
-                      >
-                        Open
-                      </Button>
-                      <Button 
-                        variant="outline-danger" 
-                        size="sm"
-                        onClick={() => handleDeleteDashboard(dashboard.id)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </td>
+          <div className="table-responsive">
+            <Table hover>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Created</th>
+                  <th>Last Modified</th>
+                  <th>Panels</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {filteredDashboards.map(dashboard => (
+                  <tr key={dashboard.id}>
+                    <td>
+                      {dashboard.name}
+                      {dashboard.refreshInterval > 0 && (
+                        <Badge bg="info" pill className="ms-2" title={`Auto-refresh: ${dashboard.refreshInterval} minutes`}>
+                          <i className="bi bi-arrow-repeat"></i>
+                        </Badge>
+                      )}
+                    </td>
+                    <td>{dashboard.description || '-'}</td>
+                    <td>{new Date(dashboard.dateCreated).toLocaleDateString()}</td>
+                    <td>{new Date(dashboard.dateModified).toLocaleDateString()}</td>
+                    <td>{dashboard.panels?.length || 0}</td>
+                    <td>
+                      <div className="d-flex gap-2">
+                        <Button 
+                          variant="outline-primary" 
+                          size="sm"
+                          onClick={() => {
+                            console.log(`Selecting dashboard: ${dashboard.id}`);
+                            onSelectDashboard(dashboard.id);
+                          }}
+                        >
+                          Open
+                        </Button>
+                        <Button 
+                          variant="outline-secondary" 
+                          size="sm"
+                          onClick={() => handleExportDashboard(dashboard.id)}
+                          title="Export Dashboard"
+                        >
+                          <i className="bi bi-download"></i>
+                        </Button>
+                        <Button 
+                          variant="outline-danger" 
+                          size="sm"
+                          onClick={() => handleDeleteDashboard(dashboard.id)}
+                          title="Delete Dashboard"
+                        >
+                          <i className="bi bi-trash"></i>
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
         )}
         
         {/* Create Dashboard Modal */}
-        <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)}>
+        <Modal 
+          show={showCreateModal} 
+          onHide={() => setShowCreateModal(false)}
+          backdrop="static"
+        >
           <Modal.Header closeButton>
             <Modal.Title>Create New Dashboard</Modal.Title>
           </Modal.Header>
           <Modal.Body>
+            {error && (
+              <Alert variant="danger" dismissible onClose={() => setError(null)}>
+                {error}
+              </Alert>
+            )}
             <Form>
               <Form.Group className="mb-3">
                 <Form.Label>Dashboard Name *</Form.Label>
@@ -250,20 +321,35 @@ const DashboardList = ({ onSelectDashboard }) => {
             <Button variant="secondary" onClick={() => setShowCreateModal(false)}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleCreateDashboard}>
-              Create Dashboard
+            <Button 
+              variant="primary" 
+              onClick={handleCreateDashboard}
+              disabled={isCreating}
+            >
+              {isCreating ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Creating...
+                </>
+              ) : 'Create Dashboard'}
             </Button>
           </Modal.Footer>
         </Modal>
         
         {/* Import Dashboard Modal */}
-        <Modal show={showImportModal} onHide={() => setShowImportModal(false)}>
+        <Modal 
+          show={showImportModal} 
+          onHide={() => setShowImportModal(false)}
+          backdrop="static"
+        >
           <Modal.Header closeButton>
             <Modal.Title>Import Dashboard</Modal.Title>
           </Modal.Header>
           <Modal.Body>
             {importError && (
-              <div className="alert alert-danger">{importError}</div>
+              <Alert variant="danger" dismissible onClose={() => setImportError(null)}>
+                {importError}
+              </Alert>
             )}
             <Form>
               <Form.Group className="mb-3">
@@ -286,9 +372,14 @@ const DashboardList = ({ onSelectDashboard }) => {
             <Button 
               variant="primary" 
               onClick={handleImportDashboard}
-              disabled={!importFile}
+              disabled={!importFile || isImporting}
             >
-              Import Dashboard
+              {isImporting ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  Importing...
+                </>
+              ) : 'Import Dashboard'}
             </Button>
           </Modal.Footer>
         </Modal>
