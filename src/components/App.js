@@ -6,6 +6,7 @@ import QueryEditor from './QueryEditor';
 import ResultsTable from './ResultsTable';
 import Visualization from './Visualization';
 import RegressionAnalysis from './RegressionAnalysis';
+import DataOperations from './DataOperations'; // Import the new component
 import ExportOptions from './ExportOptions';
 import BulkDataExport from './BulkDataExport';
 import { executeQuery, isValidSparql } from '../api/sparqlService';
@@ -98,6 +99,11 @@ function App() {
                       <div className="mt-4">
                         <h3>Results</h3>
                         <ResultsTable data={queryResults.data} columns={queryResults.columns} />
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h3>Data Operations</h3>
+                        <DataOperations data={queryResults.data} columns={queryResults.columns} />
                       </div>
                       
                       <div className="mt-4">
