@@ -21,66 +21,113 @@ const DashboardList = ({ onSelectDashboard }) => {
   
   // Load dashboards from storage
   const loadDashboards = () => {
-    const loadedDashboards = getDashboards();
-    setDashboards(loadedDashboards);
+    try {
+      console.log('DashboardList: Attempting to load dashboards');
+      const loadedDashboards = getDashboards();
+      
+      console.log('DashboardList: Loaded dashboards', loadedDashboards);
+      
+      if (loadedDashboards.length === 0) {
+        console.warn('No dashboards found in storage');
+        setError('No dashboards available. Create your first dashboard!');
+      }
+      
+      setDashboards(loadedDashboards);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading dashboards:', err);
+      setError('Failed to load dashboards. Please check your browser storage.');
+    }
   };
   
   // Filter dashboards based on search term
   const filteredDashboards = dashboards.filter(dashboard => 
     dashboard.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    dashboard.description.toLowerCase().includes(searchTerm.toLowerCase())
+    (dashboard.description && dashboard.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
   // Handle creating a new dashboard
   const handleCreateDashboard = () => {
+    console.log('Creating dashboard with name:', newDashboardName);
+    
     if (!newDashboardName.trim()) {
       setError('Dashboard name is required');
       return;
     }
     
-    const dashboard = createDashboard(newDashboardName, newDashboardDescription);
-    
-    if (dashboard) {
-      loadDashboards();
-      setShowCreateModal(false);
-      setNewDashboardName('');
-      setNewDashboardDescription('');
-      setError(null);
-    } else {
-      setError('Failed to create dashboard');
+    try {
+      const dashboard = createDashboard(newDashboardName, newDashboardDescription);
+      
+      console.log('Created dashboard:', dashboard);
+      
+      if (dashboard) {
+        loadDashboards();
+        setShowCreateModal(false);
+        setNewDashboardName('');
+        setNewDashboardDescription('');
+        setError(null);
+        
+        // Automatically select the newly created dashboard
+        onSelectDashboard(dashboard.id);
+      } else {
+        throw new Error('Failed to create dashboard');
+      }
+    } catch (err) {
+      console.error('Dashboard creation error:', err);
+      setError('Failed to create dashboard. Please try again.');
     }
   };
   
   // Handle deleting a dashboard
   const handleDeleteDashboard = (dashboardId) => {
+    console.log(`Attempting to delete dashboard: ${dashboardId}`);
+    
     if (window.confirm('Are you sure you want to delete this dashboard?')) {
-      if (deleteDashboard(dashboardId)) {
-        loadDashboards();
+      try {
+        if (deleteDashboard(dashboardId)) {
+          console.log(`Dashboard ${dashboardId} deleted successfully`);
+          loadDashboards();
+        } else {
+          throw new Error('Dashboard deletion failed');
+        }
+      } catch (err) {
+        console.error('Dashboard deletion error:', err);
+        setError('Failed to delete dashboard. Please try again.');
       }
     }
   };
   
   // Handle importing a dashboard
   const handleImportDashboard = async () => {
+    console.log('Attempting to import dashboard');
+    
     if (!importFile) {
       setImportError('Please select a file to import');
       return;
     }
     
     try {
-      await importDashboard(importFile);
+      const importedDashboard = await importDashboard(importFile);
+      
+      console.log('Imported dashboard:', importedDashboard);
+      
       loadDashboards();
       setShowImportModal(false);
       setImportFile(null);
       setImportError(null);
+      
+      // Automatically select the imported dashboard
+      onSelectDashboard(importedDashboard.id);
     } catch (error) {
-      setImportError(error.message);
+      console.error('Dashboard import error:', error);
+      setImportError(error.message || 'Failed to import dashboard');
     }
   };
   
   // Handle file selection for import
   const handleFileChange = (e) => {
     if (e.target.files.length > 0) {
+      console.log('Selected import file:', e.target.files[0].name);
       setImportFile(e.target.files[0]);
       setImportError(null);
     }
@@ -90,6 +137,12 @@ const DashboardList = ({ onSelectDashboard }) => {
     <Card>
       <Card.Header as="h5">Dashboards</Card.Header>
       <Card.Body>
+        {error && (
+          <div className="alert alert-danger mb-3">
+            {error}
+          </div>
+        )}
+        
         <div className="d-flex justify-content-between align-items-center mb-3">
           <div className="d-flex gap-2">
             <Button variant="primary" onClick={() => setShowCreateModal(true)}>
@@ -143,16 +196,12 @@ const DashboardList = ({ onSelectDashboard }) => {
                       <Button 
                         variant="outline-primary" 
                         size="sm"
-                        onClick={() => onSelectDashboard(dashboard.id)}
+                        onClick={() => {
+                          console.log(`Selecting dashboard: ${dashboard.id}`);
+                          onSelectDashboard(dashboard.id);
+                        }}
                       >
                         Open
-                      </Button>
-                      <Button 
-                        variant="outline-success" 
-                        size="sm"
-                        onClick={() => exportDashboard(dashboard.id)}
-                      >
-                        Export
                       </Button>
                       <Button 
                         variant="outline-danger" 
@@ -175,9 +224,6 @@ const DashboardList = ({ onSelectDashboard }) => {
             <Modal.Title>Create New Dashboard</Modal.Title>
           </Modal.Header>
           <Modal.Body>
-            {error && (
-              <div className="alert alert-danger">{error}</div>
-            )}
             <Form>
               <Form.Group className="mb-3">
                 <Form.Label>Dashboard Name *</Form.Label>
