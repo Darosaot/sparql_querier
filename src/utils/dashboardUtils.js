@@ -171,38 +171,58 @@ export const getDashboards = () => {
 };
 
 // Save dashboards to localStorage with error handling
-export const saveDashboards = (dashboards) => {
+export const saveDashboard = (dashboard) => {
+  if (!dashboard || typeof dashboard !== 'object') {
+    logger.error('Cannot save dashboard: Invalid dashboard object');
+    return false;
+  }
+
   try {
-    if (!Array.isArray(dashboards)) {
-      logger.error('Cannot save dashboards: dashboards is not an array', dashboards);
+    // Sanitize dashboard before saving
+    const sanitizedDashboard = sanitizeDashboard(dashboard);
+    
+    if (!sanitizedDashboard) {
+      logger.error('Cannot save dashboard: Sanitization failed');
       return false;
     }
     
-    // Sanitize dashboards before saving
-    const sanitizedDashboards = dashboards
-      .filter(d => d && typeof d === 'object')
-      .map(sanitizeDashboard)
-      .filter(Boolean);
-
-    logger.log('Saving dashboards to localStorage', {
-      totalDashboards: dashboards.length,
-      validDashboards: sanitizedDashboards.length
-    });
-
-    // If invalid dashboards were found, log a warning
-    if (sanitizedDashboards.length !== dashboards.length) {
-      logger.warn('Some dashboards were invalid and fixed or removed', {
-        removedCount: dashboards.length - sanitizedDashboards.length
+    // Get current dashboards list
+    const dashboards = getDashboards();
+    const index = dashboards.findIndex(d => d.id === sanitizedDashboard.id);
+    
+    // Update the modified date
+    const updatedDashboard = {
+      ...sanitizedDashboard,
+      dateModified: new Date().toISOString()
+    };
+    
+    if (index >= 0) {
+      // Update existing dashboard
+      dashboards[index] = updatedDashboard;
+      logger.log('Updating existing dashboard', { 
+        dashboardId: updatedDashboard.id,
+        name: updatedDashboard.name,
+        panelCount: updatedDashboard.panels.length
+      });
+    } else {
+      // Add new dashboard
+      dashboards.push(updatedDashboard);
+      logger.log('Adding new dashboard', { 
+        dashboardId: updatedDashboard.id,
+        name: updatedDashboard.name
       });
     }
-
-    localStorage.setItem(DASHBOARDS_STORAGE_KEY, JSON.stringify(sanitizedDashboards));
+    
+    // Ensure we save with stringified JSON
+    const dashboardsJSON = JSON.stringify(dashboards);
+    localStorage.setItem(DASHBOARDS_STORAGE_KEY, dashboardsJSON);
+    
     return true;
   } catch (error) {
-    logger.error('Error saving dashboards', {
+    logger.error('Unexpected error in saveDashboard', {
       errorMessage: error.message,
       errorStack: error.stack,
-      dashboardCount: dashboards?.length
+      dashboardId: dashboard?.id
     });
     return false;
   }
@@ -226,18 +246,63 @@ export const getDashboardById = (dashboardId) => {
       return null;
     }
     
-    // Sanitize the dashboard to fix any issues
-    const sanitizedDashboard = sanitizeDashboard(dashboard);
+    // Strengthen sanitizing panels to ensure positions are always valid
+const sanitizeDashboard = (dashboard) => {
+  if (!dashboard) return null;
+  
+  try {
+    // Ensure all required fields exist
+    const sanitized = {
+      ...dashboard,
+      id: dashboard.id || `dashboard-${uuidv4()}`,
+      name: dashboard.name || 'Unnamed Dashboard',
+      description: dashboard.description || '',
+      dateCreated: dashboard.dateCreated || new Date().toISOString(),
+      dateModified: dashboard.dateModified || new Date().toISOString(),
+      refreshInterval: dashboard.refreshInterval || 0,
+      panels: []
+    };
     
-    logger.log('Dashboard found', { 
-      dashboardId, 
-      name: sanitizedDashboard.name,
-      panelCount: sanitizedDashboard.panels.length 
-    });
-
-    return sanitizedDashboard;
+    // Sanitize each panel
+    if (Array.isArray(dashboard.panels)) {
+      sanitized.panels = dashboard.panels
+        .filter(panel => panel && typeof panel === 'object')
+        .map((panel, index) => {
+          // Ensure position is valid and contains numerical values
+          const defaultPosition = { x: 0, y: index * 4, w: 12, h: 4 };
+          
+          let position = defaultPosition;
+          if (panel.position && 
+              typeof panel.position === 'object' &&
+              panel.position.x !== undefined &&
+              panel.position.y !== undefined &&
+              panel.position.w !== undefined &&
+              panel.position.h !== undefined) {
+            
+            // Convert position values to numbers
+            position = {
+              x: Number(panel.position.x || 0),
+              y: Number(panel.position.y || index * 4),
+              w: Number(panel.position.w || 12),
+              h: Number(panel.position.h || 4)
+            };
+          }
+            
+          return {
+            ...panel,
+            id: panel.id || `panel-${uuidv4()}`,
+            title: panel.title || 'Unnamed Panel',
+            type: panel.type || 'table',
+            position: position,
+            query: panel.query || {},
+            visualization: panel.visualization || {}
+          };
+        });
+    }
+    
+    return sanitized;
   } catch (err) {
-    logger.error(`Error retrieving dashboard ${dashboardId}`, err);
+    logger.error('Error sanitizing dashboard', err);
     return null;
   }
 };
@@ -370,7 +435,7 @@ export const createPanel = (
     
     const panelId = `panel-${uuidv4()}`;
     
-    // Determine the best position for the new panel
+    // Determine position for the new panel
     let maxY = 0;
     if (dashboard.panels && dashboard.panels.length > 0) {
       dashboard.panels.forEach(existingPanel => {
@@ -383,24 +448,33 @@ export const createPanel = (
       });
     }
     
-    // Add a small gap
-    maxY += 1;
-    
     // Use provided position or create a position below existing panels
     const finalPosition = position || { x: 0, y: maxY, w: 12, h: 4 };
+    
+    // Ensure position values are numbers (not strings)
+    const sanitizedPosition = {
+      x: Number(finalPosition.x || 0),
+      y: Number(finalPosition.y || 0),
+      w: Number(finalPosition.w || 12),
+      h: Number(finalPosition.h || 4)
+    };
     
     const panel = {
       id: panelId,
       title: title || 'New Panel',
       type: type || 'table',
-      position: finalPosition,
+      position: sanitizedPosition,
       query: query || {},
       visualization: visualization || {}
     };
     
-    dashboard.panels.push(panel);
+    // Create a shallow copy of the dashboard to avoid reference issues
+    const updatedDashboard = {
+      ...dashboard,
+      panels: [...dashboard.panels, panel]
+    };
     
-    const saveResult = saveDashboard(dashboard);
+    const saveResult = saveDashboard(updatedDashboard);
     
     if (!saveResult) {
       logger.error('Failed to save panel to dashboard', { panelId, dashboardId });
