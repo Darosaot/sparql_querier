@@ -1,21 +1,48 @@
-/* src/components/DashboardEditor.css */
+/* src/components/DashboardEditor.css - Fixed version */
 
 /* GridStack container */
 .grid-stack {
   background: #f8f9fa;
   border-radius: 0.5rem;
   min-height: 500px;
+  position: relative;
+  width: 100%;
+  padding-bottom: 20px;
+  visibility: visible !important;
+}
+
+/* Make GridStack visible even when not initialized */
+.grid-stack:not(.grid-stack-initialized) {
+  min-height: 500px !important;
+  position: relative !important;
+  display: block !important;
 }
 
 /* Grid stack items */
 .grid-stack-item {
   cursor: move;
+  min-height: 100px !important;
+  visibility: visible !important;
+  display: block !important;
 }
 
 .grid-stack-item-content {
   padding: 0;
   overflow: hidden !important;
   height: 100%;
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+/* Force absolute positioning in the GridStack container */
+.grid-stack-item {
+  position: absolute !important;
+}
+
+/* Make sure items are visible even during initialization */
+.grid-stack-placeholder,
+.grid-stack-item.ui-draggable-dragging {
+  visibility: visible !important;
 }
 
 /* Only show handles and resize controls in edit mode */
@@ -52,43 +79,19 @@
   gap: 0.5rem;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .dashboard-header {
-    padding: 10px;
-  }
-  
-  .dashboard-title-card h2 {
-    font-size: 1.5rem;
-  }
-  
-  .grid-stack-item {
-    min-height: 200px !important;
-  }
+/* Make sure panels with same coordinates are stacked vertically instead of on top of each other */
+.grid-stack:not(.grid-stack-initialized) .grid-stack-item {
+  position: relative !important;
+  margin-bottom: 15px;
 }
 
-/* Print styles */
-@media print {
-  .dashboard-header,
-  .btn,
-  .dropdown {
-    display: none !important;
-  }
-  
-  .grid-stack-item {
-    position: relative !important;
-    width: 100% !important;
-    height: auto !important;
-    left: 0 !important;
-    top: 0 !important;
-    page-break-inside: avoid;
-    margin-bottom: 20px;
-  }
-  
-  .grid-stack {
-    display: block !important;
-    height: auto !important;
-  }
+/* Add styles for empty dashboard state */
+.dashboard-empty-state {
+  padding: 40px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #ccc;
 }
 
 /* Dashboard panel styles */
@@ -133,33 +136,80 @@
   overflow-y: auto;
 }
 
-/* Ensure grid and panels are always visible */
-.grid-stack {
-  background: #f8f9fa;
-  min-height: 500px !important;
-  position: relative !important;
-  width: 100% !important;
-  display: block !important;
-  visibility: visible !important;
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  border-radius: 0.375rem;
 }
 
-.grid-stack-item {
-  min-height: 100px !important;
-  visibility: visible !important;
-  display: block !important;
+/* Expanded panel styles */
+.expanded-panel {
+  min-height: 400px;
 }
 
-/* Make sure panels with same coordinates are stacked vertically instead of on top of each other */
-.grid-stack:not(.grid-stack-initialized) .grid-stack-item {
-  position: relative !important;
-  margin-bottom: 15px;
+/* Full screen panel */
+.dashboard-panel:fullscreen {
+  background-color: white;
+  padding: 1rem;
 }
 
-/* Add styles for empty dashboard state */
-.dashboard-empty-state {
-  padding: 40px;
-  text-align: center;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border: 2px dashed #ccc;
+.dashboard-panel:fullscreen .card-body {
+  padding: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: 10px;
+  }
+  
+  .dashboard-title-card h2 {
+    font-size: 1.5rem;
+  }
+  
+  .grid-stack-item {
+    min-height: 200px !important;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+  }
+  
+  .dashboard-header > div {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  .dashboard-header,
+  .btn,
+  .dropdown {
+    display: none !important;
+  }
+  
+  .grid-stack-item {
+    position: relative !important;
+    width: 100% !important;
+    height: auto !important;
+    left: 0 !important;
+    top: 0 !important;
+    page-break-inside: avoid;
+    margin-bottom: 20px;
+  }
+  
+  .grid-stack {
+    display: block !important;
+    height: auto !important;
+  }
 }
