@@ -45,67 +45,68 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
   
   // Initialize GridStack
   const initializeGrid = useCallback(() => {
-    if (!dashboard) return;
-    
-    // Clean up any previous instance
-    if (gridInstance) {
-      gridInstance.destroy();
-    }
-    
-    // Initialize new grid
-    const grid = GridStack.init({
-      column: 12,
-      cellHeight: 50,
-      animate: true,
-      disableOneColumnMode: false,
-      resizable: { handles: 'all' },
-      draggable: { handle: '.panel-drag-handle' },
-      staticGrid: !editMode // Only allow dragging in edit mode
-    });
-    
-    setGridInstance(grid);
-    
-    // Add change event to save positions
-    grid.on('change', (event, items) => {
-      if (!items || !items.length) return;
+  if (!dashboard) return;
+  
+  // Clean up any previous instance
+  if (gridInstance) {
+    gridInstance.destroy();
+  }
+  
+  // Initialize new grid
+  const grid = GridStack.init({
+    column: 12,
+    cellHeight: 50,
+    animate: true,
+    disableOneColumnMode: false,
+    resizable: { handles: 'all' },
+    draggable: { handle: '.panel-drag-handle' },
+    staticGrid: !editMode // Only allow dragging in edit mode
+  });
+  
+  setGridInstance(grid);
+  
+  // Add change event to save positions
+  grid.on('change', (event, items) => {
+    // ... existing code ...
+  });
+  
+  // Keep track of used y-positions to prevent overlap
+  let maxYPosition = 0;
+  let updatedDashboard = false;
+  
+  // Add panels to grid based on saved positions
+  dashboard.panels.forEach((panel, index) => {
+    const element = document.getElementById(`panel-${panel.id}`);
+    if (element) {
+      // Get saved position or create a default
+      let { x, y, w, h } = panel.position || { x: 0, y: 0, w: 6, h: 4 };
       
-      const updatedDashboard = { ...dashboard };
-      
-      items.forEach(item => {
-        const panelId = item.id;
-        const panelIndex = updatedDashboard.panels.findIndex(p => p.id === panelId);
-        
-        if (panelIndex !== -1) {
-          // Update panel position
-          updatedDashboard.panels[panelIndex].position = {
-            x: item.x,
-            y: item.y,
-            w: item.w,
-            h: item.h
-          };
-        }
-      });
-      
-      // Update local state
-      setDashboard(updatedDashboard);
-      
-      // Save to storage
-      saveDashboard(updatedDashboard);
-    });
-    
-    // Add panels to grid based on saved positions
-    dashboard.panels.forEach(panel => {
-      const element = document.getElementById(`panel-${panel.id}`);
-      if (element) {
-        const { x, y, w, h } = panel.position || { x: 0, y: 0, w: 6, h: 4 };
-        grid.addWidget(element, { x, y, w, h, id: panel.id });
+      // Check for position overlap by comparing with maxYPosition
+      if (y < maxYPosition) {
+        // This panel would overlap with a previous one, move it down
+        y = maxYPosition;
+        panel.position = { x, y, w, h };
+        updatedDashboard = true;
       }
-    });
-    
-    // Update grid mode based on edit state
-    grid.setStatic(!editMode);
-    
-  }, [dashboard, editMode, gridInstance]);
+      
+      // Update the max Y position for the next panel
+      // Use standard height of 4 if none specified
+      maxYPosition = y + (h || 4);
+      
+      // Add the widget with the verified position
+      grid.addWidget(element, { x, y, w, h, id: panel.id });
+    }
+  });
+  
+  // Save the dashboard if positions were updated
+  if (updatedDashboard) {
+    saveDashboard(dashboard);
+  }
+  
+  // Update grid mode based on edit state
+  grid.setStatic(!editMode);
+  
+}, [dashboard, editMode, gridInstance]);
   
   // Load dashboard data
 useEffect(() => {
