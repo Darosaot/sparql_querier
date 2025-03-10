@@ -364,7 +364,8 @@ export const createPanel = (
   type, 
   query, 
   visualization, 
-  position = null
+  position = null,
+  size = null
 ) => {
   logger.log('Attempting to create panel', {
     dashboardId,
@@ -382,37 +383,19 @@ export const createPanel = (
     
     const panelId = `panel-${uuidv4()}`;
     
-    // Determine position for the new panel
-    let maxY = 0;
-    if (dashboard.panels && dashboard.panels.length > 0) {
-      dashboard.panels.forEach(existingPanel => {
-        if (!existingPanel.position) return;
-        
-        const panelBottom = existingPanel.position.y + (existingPanel.position.h || 4);
-        if (panelBottom > maxY) {
-          maxY = panelBottom;
-        }
-      });
-    }
-    
-    // Use provided position or create a position below existing panels
-    const finalPosition = position || { x: 0, y: maxY, w: 12, h: 4 };
-    
-    // Ensure position values are numbers (not strings)
-    const sanitizedPosition = {
-      x: Number(finalPosition.x || 0),
-      y: Number(finalPosition.y || 0),
-      w: Number(finalPosition.w || 12),
-      h: Number(finalPosition.h || 4)
+    // Use default size if not provided
+    const panelSize = size || {
+      width: 'full',
+      height: 'medium'
     };
     
     const panel = {
       id: panelId,
       title: title || 'New Panel',
       type: type || 'table',
-      position: sanitizedPosition,
       query: query || {},
-      visualization: visualization || {}
+      visualization: visualization || {},
+      size: panelSize
     };
     
     // Create a shallow copy of the dashboard to avoid reference issues
