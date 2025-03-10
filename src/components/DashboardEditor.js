@@ -1,7 +1,7 @@
-// src/components/DashboardEditor.js
-import React, { useState, useEffect, useCallback } from 'react';
+// src/components/DashboardEditor.js 
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Button, Row, Col, Form, Alert, Modal, OverlayTrigger, Tooltip, Dropdown } from 'react-bootstrap';
-import { GridStack, GridStackElement } from 'gridstack';
+import { GridStack } from 'gridstack';
 import 'gridstack/dist/gridstack.min.css';
 import { 
   getDashboardById, 
@@ -9,7 +9,6 @@ import {
   createPanel, 
   deletePanel, 
   shareDashboard,
-  updatePanelPosition,
   scheduleDashboardRefresh 
 } from '../utils/dashboardUtils';
 import { executeQuery } from '../api/sparqlService';
@@ -30,6 +29,7 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
   const [shareMode, setShareMode] = useState('view');
   const [refreshInterval, setRefreshInterval] = useState(0);
   const [showRefreshModal, setShowRefreshModal] = useState(false);
+  const [gridInitialized, setGridInitialized] = useState(false);
   
   // Panel creation state
   const [newPanelTitle, setNewPanelTitle] = useState('');
@@ -43,147 +43,46 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
   const [yAxis, setYAxis] = useState('');
   const [selectedColor, setSelectedColor] = useState('#1f77b4');
   
-  // Initialize GridStack
-  const initializeGrid = useCallback(() => {
-  if (!dashboard) return;
+  // Use a ref to track mounted state
+  const isMounted = useRef(true);
+  const gridContainerRef = useRef(null);
   
-  // Clean up any previous instance
-  if (gridInstance) {
-    gridInstance.destroy();
-  }
-  
-  // Initialize new grid
-  const grid = GridStack.init({
-    column: 12,
-    cellHeight: 50,
-    animate: true,
-    disableOneColumnMode: false,
-    resizable: { handles: 'all' },
-    draggable: { handle: '.panel-drag-handle' },
-    staticGrid: !editMode // Only allow dragging in edit mode
-  });
-  
-  setGridInstance(grid);
-  
-  // Add change event to save positions
-  grid.on('change', (event, items) => {
-    // ... existing code ...
-  });
-  
-  // Keep track of used y-positions to prevent overlap
-  let maxYPosition = 0;
-  let updatedDashboard = false;
-  
-  // Add panels to grid based on saved positions
-  dashboard.panels.forEach((panel, index) => {
-    const element = document.getElementById(`panel-${panel.id}`);
-    if (element) {
-      // Get saved position or create a default
-      let { x, y, w, h } = panel.position || { x: 0, y: 0, w: 6, h: 4 };
-      
-      // Check for position overlap by comparing with maxYPosition
-      if (y < maxYPosition) {
-        // This panel would overlap with a previous one, move it down
-        y = maxYPosition;
-        panel.position = { x, y, w, h };
-        updatedDashboard = true;
-      }
-      
-      // Update the max Y position for the next panel
-      // Use standard height of 4 if none specified
-      maxYPosition = y + (h || 4);
-      
-      // Add the widget with the verified position
-      grid.addWidget(element, { x, y, w, h, id: panel.id });
-    }
-  });
-  
-  // Save the dashboard if positions were updated
-  if (updatedDashboard) {
-    saveDashboard(dashboard);
-  }
-  
-  // Update grid mode based on edit state
-  grid.setStatic(!editMode);
-  
-}, [dashboard, editMode, gridInstance]);
-  
-  // Load dashboard data
-useEffect(() => {
-  if (dashboard) {
-    // Use a longer delay to ensure DOM elements are fully ready
-    const timer = setTimeout(() => {
-      try {
-        // Clear any existing grid first
-        const gridElement = document.querySelector('.grid-stack');
-        if (gridElement && gridElement.gridstack) {
-          gridElement.gridstack.destroy();
-        }
-        
-        initializeGrid();
-        
-        // Force a second initialization after a delay to ensure proper rendering
-        setTimeout(() => {
-          // Re-add panels to grid with explicit positions
-          if (gridInstance) {
-            dashboard.panels.forEach((panel, index) => {
-              const element = document.getElementById(`panel-${panel.id}`);
-              if (element) {
-                // Set positions based on index to avoid overlap
-                const position = {
-                  x: 0, 
-                  y: index * 4, // Position panels vertically
-                  w: 12,        // Use full width
-                  h: 4          // Standard height
-                };
-                
-                panel.position = position; // Update panel position in data
-                
-                // Try to remove and re-add the widget with new position
-                try {
-                  gridInstance.removeWidget(element, false);
-                } catch (err) {
-                  console.log('Widget was not previously added');
-                }
-                
-                gridInstance.addWidget(element, position);
-              }
-            });
-            
-            // Ensure grid is visible and not in static mode
-            gridInstance.setStatic(false);
-            
-            // Make grid immediately visible
-            const gridContainer = document.querySelector('.grid-stack');
-            if (gridContainer) {
-              gridContainer.style.visibility = 'visible';
-              gridContainer.style.display = 'block';
-            }
-            
-            // Save the updated positions
-            saveDashboard(dashboard);
-          }
-        }, 500);
-      } catch (err) {
-        console.error('Error initializing grid:', err);
-      }
-    }, 500); // Longer initial delay
-    
-    return () => clearTimeout(timer);
-  }
-}, [dashboard, initializeGrid]);
-  
-  // Initialize grid after dashboard is loaded
+  // Set up the mounted ref
   useEffect(() => {
-    if (dashboard) {
-      // Initialize grid after a short delay to ensure DOM elements are ready
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+  
+  // Load dashboard when component mounts
+  useEffect(() => {
+    loadDashboard();
+    
+    // Cleanup function for grid instance
+    return () => {
+      if (gridInstance) {
+        try {
+          gridInstance.destroy();
+        } catch (err) {
+          console.error("Error destroying grid:", err);
+        }
+      }
+    };
+  }, [dashboardId]);
+  
+  // Initialize GridStack after dashboard is loaded and DOM is ready
+  useEffect(() => {
+    if (dashboard && !gridInitialized) {
       const timer = setTimeout(() => {
-        initializeGrid();
-      }, 100);
+        if (isMounted.current) {
+          initializeGrid();
+        }
+      }, 300);
       
       return () => clearTimeout(timer);
     }
-  }, [dashboard, initializeGrid]);
+  }, [dashboard, gridInitialized]);
   
   // Update grid when edit mode changes
   useEffect(() => {
@@ -192,51 +91,185 @@ useEffect(() => {
     }
   }, [editMode, gridInstance]);
   
+  // Main function to load dashboard data
   const loadDashboard = () => {
-  setLoading(true);
-  const dashboardData = getDashboardById(dashboardId);
+    setLoading(true);
+    setError(null);
+    setGridInitialized(false);
+    
+    try {
+      const dashboardData = getDashboardById(dashboardId);
+      
+      if (dashboardData) {
+        console.log("Dashboard loaded:", dashboardData.id, dashboardData.name);
+        
+        // Ensure panels have position data
+        const updatedPanels = dashboardData.panels.map((panel, index) => {
+          if (!panel.position) {
+            return {
+              ...panel,
+              position: { x: 0, y: index * 4, w: 12, h: 4 }
+            };
+          }
+          return panel;
+        });
+        
+        // Update dashboard with fixed panels
+        const updatedDashboard = {
+          ...dashboardData,
+          panels: updatedPanels
+        };
+        
+        // Update state with the loaded dashboard
+        setDashboard(updatedDashboard);
+        setDashboardName(updatedDashboard.name);
+        setDashboardDescription(updatedDashboard.description || '');
+        setRefreshInterval(updatedDashboard.refreshInterval || 0);
+      } else {
+        setError('Dashboard not found. It may have been deleted.');
+      }
+    } catch (err) {
+      console.error("Error loading dashboard:", err);
+      setError(`Failed to load dashboard: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
   
-  if (dashboardData) {
-    // Check and fix panel positions before setting dashboard
-    if (dashboardData.panels && dashboardData.panels.length > 0) {
-      let requiresUpdate = false;
-      let maxY = 0;
-      
-      // First pass: identify overlapping panels
-      dashboardData.panels.forEach((panel, index) => {
-        // Ensure panel has a position
-        if (!panel.position) {
-          panel.position = { x: 0, y: maxY, w: 12, h: 4 };
-          requiresUpdate = true;
-        }
-        
-        // Check if this panel would overlap with previous ones
-        if (panel.position.y < maxY) {
-          panel.position.y = maxY;
-          requiresUpdate = true;
-        }
-        
-        // Update maxY for next panel
-        maxY = panel.position.y + (panel.position.h || 4);
-      });
-      
-      // Save the dashboard if positions were updated
-      if (requiresUpdate) {
-        saveDashboard(dashboardData);
+  // Initialize grid with optimized approach
+  const initializeGrid = () => {
+    if (!dashboard || !isMounted.current) return;
+    
+    console.log("Initializing GridStack for dashboard:", dashboard.id);
+    
+    // Clean up any previous instance
+    if (gridInstance) {
+      try {
+        gridInstance.destroy();
+      } catch (err) {
+        console.error("Error destroying previous grid:", err);
       }
     }
     
-    setDashboard(dashboardData);
-    setDashboardName(dashboardData.name);
-    setDashboardDescription(dashboardData.description || '');
-    setRefreshInterval(dashboardData.refreshInterval || 0);
-    setError(null);
-  } else {
-    setError('Dashboard not found');
-  }
-  
-  setLoading(false);
-};
+    try {
+      // Delay slightly to ensure DOM is ready
+      setTimeout(() => {
+        // Make sure we're still mounted
+        if (!isMounted.current) return;
+        
+        const gridElement = document.querySelector('.grid-stack');
+        if (!gridElement) {
+          console.error("Grid element not found in DOM");
+          return;
+        }
+        
+        // Initialize GridStack
+        const grid = GridStack.init({
+          column: 12,
+          cellHeight: 50,
+          animate: true,
+          disableOneColumnMode: false,
+          resizable: { handles: 'all' },
+          draggable: { handle: '.panel-drag-handle' },
+          staticGrid: !editMode,
+          margin: 5
+        }, gridElement);
+        
+        // Set the grid instance in state
+        setGridInstance(grid);
+        
+        // Add change event to save positions after drag/resize
+        grid.on('change', (event, items) => {
+          if (!dashboard || !items || items.length === 0) return;
+          
+          const updatedDashboard = { ...dashboard };
+          
+          // Update panel positions based on grid changes
+          items.forEach(item => {
+            const panelId = item.id || item.el.getAttribute('id').replace('panel-', '');
+            const panelIndex = updatedDashboard.panels.findIndex(p => p.id === panelId);
+            
+            if (panelIndex !== -1) {
+              updatedDashboard.panels[panelIndex].position = {
+                x: item.x,
+                y: item.y,
+                w: item.w,
+                h: item.h
+              };
+            }
+          });
+          
+          // Save the updated positions
+          saveDashboard(updatedDashboard);
+          setDashboard(updatedDashboard);
+        });
+        
+        // First remove all widgets (in case of re-initialization)
+        grid.removeAll();
+        
+        // Sort panels by y-position to prevent overlap
+        const sortedPanels = [...dashboard.panels].sort((a, b) => {
+          const aPos = a.position || { y: 0 };
+          const bPos = b.position || { y: 0 };
+          return aPos.y - bPos.y;
+        });
+        
+        // Add panels to grid based on saved positions
+        let maxYPosition = 0;
+        let updatedPositions = false;
+        
+        sortedPanels.forEach((panel, index) => {
+          const element = document.getElementById(`panel-${panel.id}`);
+          
+          if (element) {
+            // Get saved position or create a default
+            let { x, y, w, h } = panel.position || { x: 0, y: 0, w: 6, h: 4 };
+            
+            // Ensure width and height have sensible values
+            w = w || 6;
+            h = h || 4;
+            
+            // Check for position overlap by comparing with maxYPosition
+            if (y < maxYPosition) {
+              y = maxYPosition;
+              panel.position = { x, y, w, h };
+              updatedPositions = true;
+            }
+            
+            // Update the max Y position for the next panel
+            maxYPosition = y + h + 1; // +1 for a small gap between panels
+            
+            // Add the widget with the verified position
+            try {
+              grid.addWidget(element, { x, y, w, h, id: panel.id });
+            } catch (err) {
+              console.error(`Error adding widget for panel ${panel.id}:`, err);
+            }
+          } else {
+            console.warn(`Element not found for panel: panel-${panel.id}`);
+          }
+        });
+        
+        // Save the dashboard if positions were updated
+        if (updatedPositions) {
+          saveDashboard(dashboard);
+        }
+        
+        // Make grid visible
+        if (gridElement) {
+          gridElement.style.visibility = 'visible';
+        }
+        
+        // Mark grid as initialized
+        setGridInitialized(true);
+        console.log("GridStack successfully initialized");
+        
+      }, 200);
+    } catch (err) {
+      console.error("Error during grid initialization:", err);
+      setError(`Failed to initialize dashboard layout: ${err.message}`);
+    }
+  };
   
   // Handle saving dashboard changes
   const handleSaveDashboard = () => {
@@ -245,64 +278,87 @@ useEffect(() => {
       return;
     }
     
-    const updatedDashboard = {
-      ...dashboard,
-      name: dashboardName,
-      description: dashboardDescription,
-      refreshInterval: refreshInterval
-    };
-    
-    if (saveDashboard(updatedDashboard)) {
-      setDashboard(updatedDashboard);
-      setEditMode(false);
-      setError(null);
-    } else {
-      setError('Failed to save dashboard');
+    try {
+      const updatedDashboard = {
+        ...dashboard,
+        name: dashboardName,
+        description: dashboardDescription,
+        refreshInterval: refreshInterval
+      };
+      
+      if (saveDashboard(updatedDashboard)) {
+        setDashboard(updatedDashboard);
+        setEditMode(false);
+        setError(null);
+      } else {
+        setError('Failed to save dashboard');
+      }
+    } catch (err) {
+      console.error("Error saving dashboard:", err);
+      setError(`Failed to save dashboard: ${err.message}`);
     }
   };
   
   // Handle deleting a panel
   const handleDeletePanel = (panelId) => {
     if (window.confirm('Are you sure you want to delete this panel?')) {
-      // Remove from grid
-      if (gridInstance) {
-        const element = document.getElementById(`panel-${panelId}`);
-        if (element) {
-          gridInstance.removeWidget(element, false);
+      try {
+        // Remove from grid if grid is initialized
+        if (gridInstance) {
+          const element = document.getElementById(`panel-${panelId}`);
+          if (element) {
+            gridInstance.removeWidget(element, false);
+          }
         }
-      }
-      
-      // Delete from storage
-      if (deletePanel(dashboardId, panelId)) {
-        loadDashboard();
+        
+        // Delete from storage
+        if (deletePanel(dashboardId, panelId)) {
+          // Reload dashboard to ensure state is in sync
+          loadDashboard();
+        } else {
+          setError('Failed to delete panel.');
+        }
+      } catch (err) {
+        console.error("Error deleting panel:", err);
+        setError(`Failed to delete panel: ${err.message}`);
       }
     }
   };
   
   // Handle sharing the dashboard
   const handleShareDashboard = () => {
-    const url = shareDashboard(dashboardId, shareMode);
-    setShareUrl(url);
-    setShowShareModal(true);
+    try {
+      const url = shareDashboard(dashboardId, shareMode);
+      setShareUrl(url);
+      setShowShareModal(true);
+    } catch (err) {
+      console.error("Error sharing dashboard:", err);
+      setError(`Failed to share dashboard: ${err.message}`);
+    }
   };
   
   // Handle setting a refresh schedule
   const handleSetRefreshSchedule = () => {
-    const updatedDashboard = {
-      ...dashboard,
-      refreshInterval: refreshInterval
-    };
-    
-    if (saveDashboard(updatedDashboard)) {
-      setDashboard(updatedDashboard);
-      setShowRefreshModal(false);
+    try {
+      const updatedDashboard = {
+        ...dashboard,
+        refreshInterval: refreshInterval
+      };
       
-      // Activate the refresh schedule if an interval is set
-      if (refreshInterval > 0) {
-        scheduleDashboardRefresh(dashboardId, refreshInterval);
+      if (saveDashboard(updatedDashboard)) {
+        setDashboard(updatedDashboard);
+        setShowRefreshModal(false);
+        
+        // Activate the refresh schedule if an interval is set
+        if (refreshInterval > 0) {
+          scheduleDashboardRefresh(dashboardId, refreshInterval);
+        }
+      } else {
+        setError('Failed to set refresh schedule');
       }
-    } else {
-      setError('Failed to set refresh schedule');
+    } catch (err) {
+      console.error("Error setting refresh schedule:", err);
+      setError(`Failed to set refresh schedule: ${err.message}`);
     }
   };
   
@@ -355,41 +411,63 @@ useEffect(() => {
       return;
     }
     
-    const query = {
-      endpoint: newPanelEndpoint,
-      sparql: newPanelQuery
-    };
-    
-    const visualization = {
-      columns: queryResults.columns,
-      xAxis: xAxis,
-      yAxis: yAxis,
-      color: selectedColor
-    };
-    
-    // Find a default position
-    const position = {
-      x: 0,
-      y: 0,
-      w: 6,
-      h: 4
-    };
-    
-    const panel = createPanel(
-      dashboardId,
-      newPanelTitle,
-      newPanelType,
-      query,
-      visualization,
-      position
-    );
-    
-    if (panel) {
-      loadDashboard();
-      setShowAddPanelModal(false);
-      resetPanelForm();
-    } else {
-      setPanelQueryError('Failed to create panel');
+    try {
+      const query = {
+        endpoint: newPanelEndpoint,
+        sparql: newPanelQuery
+      };
+      
+      const visualization = {
+        columns: queryResults.columns,
+        xAxis: xAxis,
+        yAxis: yAxis,
+        color: selectedColor
+      };
+      
+      // Calculate position for new panel - place it below all existing panels
+      let maxY = 0;
+      if (dashboard.panels && dashboard.panels.length > 0) {
+        dashboard.panels.forEach(panel => {
+          const pos = panel.position || { y: 0, h: 4 };
+          const bottom = pos.y + (pos.h || 4);
+          if (bottom > maxY) {
+            maxY = bottom;
+          }
+        });
+      }
+      
+      // Add a small gap
+      maxY += 1;
+      
+      const position = {
+        x: 0,
+        y: maxY,
+        w: 12,
+        h: 4
+      };
+      
+      const panel = createPanel(
+        dashboardId,
+        newPanelTitle,
+        newPanelType,
+        query,
+        visualization,
+        position
+      );
+      
+      if (panel) {
+        // Close modal and reset form
+        setShowAddPanelModal(false);
+        resetPanelForm();
+        
+        // Reload dashboard to get the updated data
+        loadDashboard();
+      } else {
+        setPanelQueryError('Failed to create panel');
+      }
+    } catch (err) {
+      console.error("Error adding panel:", err);
+      setPanelQueryError(`Failed to add panel: ${err.message}`);
     }
   };
   
@@ -418,14 +496,39 @@ useEffect(() => {
     }
   };
   
+  // Show loading state
   if (loading) {
-    return <div className="text-center p-5">Loading dashboard...</div>;
+    return (
+      <div className="text-center p-5">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading dashboard...</span>
+        </div>
+        <p className="mt-3">Loading dashboard...</p>
+      </div>
+    );
   }
   
+  // Show error if dashboard not found
   if (error && !dashboard) {
     return (
       <Alert variant="danger">
-        {error}
+        <Alert.Heading>Error</Alert.Heading>
+        <p>{error}</p>
+        <div className="mt-3">
+          <Button variant="primary" onClick={onBack}>
+            Back to Dashboard List
+          </Button>
+        </div>
+      </Alert>
+    );
+  }
+  
+  // If no dashboard, show no data message
+  if (!dashboard) {
+    return (
+      <Alert variant="warning">
+        <Alert.Heading>No Dashboard Found</Alert.Heading>
+        <p>The requested dashboard could not be found.</p>
         <div className="mt-3">
           <Button variant="primary" onClick={onBack}>
             Back to Dashboard List
@@ -528,7 +631,7 @@ useEffect(() => {
       </div>
       
       {error && (
-        <Alert variant="danger" className="mb-3">
+        <Alert variant="danger" className="mb-3" dismissible onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
@@ -592,7 +695,7 @@ useEffect(() => {
           </Button>
         </div>
       ) : (
-        <div className="grid-stack">
+        <div className="grid-stack" ref={gridContainerRef}>
           {dashboard.panels.map(panel => (
             <div 
               key={panel.id} 
@@ -618,13 +721,16 @@ useEffect(() => {
         onHide={() => setShowAddPanelModal(false)}
         size="lg"
         className="panel-modal"
+        backdrop="static"
       >
         <Modal.Header closeButton>
           <Modal.Title>Add Dashboard Panel</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {panelQueryError && (
-            <Alert variant="danger">{panelQueryError}</Alert>
+            <Alert variant="danger" dismissible onClose={() => setPanelQueryError(null)}>
+              {panelQueryError}
+            </Alert>
           )}
           
           <Form>
@@ -686,7 +792,12 @@ useEffect(() => {
                 onClick={handleTestQuery}
                 disabled={queryLoading}
               >
-                {queryLoading ? 'Testing Query...' : 'Test Query'}
+                {queryLoading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Testing Query...
+                  </>
+                ) : 'Test Query'}
               </Button>
             </div>
             
@@ -858,6 +969,13 @@ useEffect(() => {
           </Button>
         </Modal.Footer>
       </Modal>
+      
+      {/* Edit mode indicator */}
+      {editMode && (
+        <div className="edit-mode-indicator">
+          Edit Mode
+        </div>
+      )}
     </div>
   );
 };
