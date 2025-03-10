@@ -193,21 +193,50 @@ useEffect(() => {
   }, [editMode, gridInstance]);
   
   const loadDashboard = () => {
-    setLoading(true);
-    const dashboardData = getDashboardById(dashboardId);
-    
-    if (dashboardData) {
-      setDashboard(dashboardData);
-      setDashboardName(dashboardData.name);
-      setDashboardDescription(dashboardData.description || '');
-      setRefreshInterval(dashboardData.refreshInterval || 0);
-      setError(null);
-    } else {
-      setError('Dashboard not found');
+  setLoading(true);
+  const dashboardData = getDashboardById(dashboardId);
+  
+  if (dashboardData) {
+    // Check and fix panel positions before setting dashboard
+    if (dashboardData.panels && dashboardData.panels.length > 0) {
+      let requiresUpdate = false;
+      let maxY = 0;
+      
+      // First pass: identify overlapping panels
+      dashboardData.panels.forEach((panel, index) => {
+        // Ensure panel has a position
+        if (!panel.position) {
+          panel.position = { x: 0, y: maxY, w: 12, h: 4 };
+          requiresUpdate = true;
+        }
+        
+        // Check if this panel would overlap with previous ones
+        if (panel.position.y < maxY) {
+          panel.position.y = maxY;
+          requiresUpdate = true;
+        }
+        
+        // Update maxY for next panel
+        maxY = panel.position.y + (panel.position.h || 4);
+      });
+      
+      // Save the dashboard if positions were updated
+      if (requiresUpdate) {
+        saveDashboard(dashboardData);
+      }
     }
     
-    setLoading(false);
-  };
+    setDashboard(dashboardData);
+    setDashboardName(dashboardData.name);
+    setDashboardDescription(dashboardData.description || '');
+    setRefreshInterval(dashboardData.refreshInterval || 0);
+    setError(null);
+  } else {
+    setError('Dashboard not found');
+  }
+  
+  setLoading(false);
+};
   
   // Handle saving dashboard changes
   const handleSaveDashboard = () => {
