@@ -30,8 +30,8 @@ const commonPrefixes = [
 const endpointSuggestions = [
   { url: 'https://dbpedia.org/sparql', description: 'DBpedia - General knowledge from Wikipedia' },
   { url: 'https://query.wikidata.org/sparql', description: 'Wikidata - Structured data from Wikimedia projects' },
-  { url: 'https://data.europa.eu/a4g/sparql', description: 'EU TED Data - Public procurement notices' },
-  { url: 'http://linkedgeodata.org/sparql', description: 'LinkedGeoData - Spatial data from OpenStreetMap' }
+  { url: 'http://linkedgeodata.org/sparql', description: 'LinkedGeoData - Spatial data from OpenStreetMap' },
+  { url: 'https://publications.europa.eu/webapi/rdf/sparql', description: 'CELLAR - EU Publications Office Reference Data' }
 ];
 
 // Line number helper function
