@@ -12,15 +12,20 @@ const Header = () => {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav" className="justify-content-between">
           <Nav className="me-auto">
-            <Nav.Link href="#home">Home</Nav.Link>
-            <Nav.Link href="#documentation">Documentation</Nav.Link>
-            <Nav.Link href="#examples">Examples</Nav.Link>
+            <Nav.Link href="https://sparqlquerier.netlify.app/">Home</Nav.Link>
           </Nav>
           <div className="d-flex align-items-center">
             <Navbar.Text className="me-3 d-none d-md-block">
               A modern tool for semantic data analysis
             </Navbar.Text>
-            <Button variant="outline-light" size="sm" className="d-none d-md-block">
+            <Button 
+              variant="outline-light" 
+              size="sm" 
+              className="d-none d-md-block"
+              href="https://github.com/Darosaot/sparql_querier/tree/main"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               GitHub
             </Button>
           </div>
