@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Nav, Tab } from 'react-bootstrap';
+import { Container, Row, Col, Nav, Tab, Footer } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import './App.css'; // Make sure to import the custom CSS
 import Header from './Header';
 import QueryEditor from './QueryEditor';
 import ResultsTable from './ResultsTable';
@@ -144,11 +145,11 @@ function App() {
   return (
     <div className="App">
       <Header />
-      <Container fluid>
+      <Container fluid className="mb-5">
         <Tab.Container activeKey={activeTab} onSelect={(key) => setActiveTab(key)}>
-          <Row className="mt-3 mb-3">
+          <Row className="mt-3 mb-4">
             <Col>
-              <Nav variant="tabs">
+              <Nav variant="tabs" className="nav-tabs-custom">
                 <Nav.Item>
                   <Nav.Link eventKey="sparql-query">SPARQL Query</Nav.Link>
                 </Nav.Item>
@@ -186,32 +187,32 @@ function App() {
                   
                   {queryResults && queryResults.data.length > 0 && (
                     <>
-                      <div className="alert alert-success mt-3" role="alert">
-                        Query executed successfully, retrieved {queryResults.data.length} results in {queryResults.executionTime.toFixed(2)} seconds.
+                      <div className="alert alert-success mt-4" role="alert">
+                        <strong>Success!</strong> Query executed successfully, retrieved {queryResults.data.length} results in {queryResults.executionTime.toFixed(2)} seconds.
                       </div>
                       
                       <div className="mt-4">
-                        <h3>Results</h3>
+                        <h3 className="mb-3">Results</h3>
                         <ResultsTable data={queryResults.data} columns={queryResults.columns} />
                       </div>
                       
                       <div className="mt-4">
-                        <h3>Data Operations</h3>
-                        <DataOperations data={queryResults.data} columns={queryResults.columns} />
-                      </div>
-                      
-                      <div className="mt-4">
-                        <h3>Data Visualization</h3>
+                        <h3 className="mb-3">Data Visualization</h3>
                         <Visualization data={queryResults.data} columns={queryResults.columns} />
                       </div>
                       
                       <div className="mt-4">
-                        <h3>Regression Analysis</h3>
+                        <h3 className="mb-3">Data Operations</h3>
+                        <DataOperations data={queryResults.data} columns={queryResults.columns} />
+                      </div>
+                      
+                      <div className="mt-4">
+                        <h3 className="mb-3">Regression Analysis</h3>
                         <RegressionAnalysis data={queryResults.data} columns={queryResults.columns} />
                       </div>
                       
                       <div className="mt-4 mb-5">
-                        <h3>Export Results</h3>
+                        <h3 className="mb-3">Export Results</h3>
                         <ExportOptions data={queryResults.data} columns={queryResults.columns} />
                       </div>
                     </>
@@ -239,6 +240,18 @@ function App() {
           </Row>
         </Tab.Container>
       </Container>
+      
+      {/* Add a footer */}
+      <footer className="app-footer">
+        <Container>
+          <Row>
+            <Col className="text-center">
+              <p>&copy; {new Date().getFullYear()} SPARQL Analytics. All rights reserved.</p>
+              <p className="small mb-0">A modern tool for querying and visualizing SPARQL endpoints.</p>
+            </Col>
+          </Row>
+        </Container>
+      </footer>
     </div>
   );
 }
