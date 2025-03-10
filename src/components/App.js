@@ -1,9 +1,12 @@
+// src/components/App.js
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Nav, Tab, Footer } from 'react-bootstrap';
+import { Container, Row, Col, Nav, Tab } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import './App.css'; // Make sure to import the custom CSS
+import 'bootstrap-icons/font/bootstrap-icons.css'; // Add Bootstrap Icons
+import './App.css';
 import Header from './Header';
-import QueryEditor from './QueryEditor';
+// Import the enhanced editor
+import EnhancedSparqlEditor from './EnhancedSparqlEditor';
 import ResultsTable from './ResultsTable';
 import Visualization from './Visualization';
 import RegressionAnalysis from './RegressionAnalysis';
@@ -170,7 +173,8 @@ function App() {
             <Col>
               <Tab.Content>
                 <Tab.Pane eventKey="sparql-query">
-                  <QueryEditor 
+                  {/* Use our enhanced SPARQL editor */}
+                  <EnhancedSparqlEditor 
                     sparqlEndpoint={sparqlEndpoint}
                     setSparqlEndpoint={setSparqlEndpoint}
                     query={query}
@@ -241,7 +245,7 @@ function App() {
         </Tab.Container>
       </Container>
       
-      {/* Add a footer */}
+      {/* Footer */}
       <footer className="app-footer">
         <Container>
           <Row>
