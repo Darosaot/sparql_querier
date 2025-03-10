@@ -1,6 +1,7 @@
 // src/components/EnhancedSparqlEditor.js
-import React, { useState, useRef, useEffect } from 'react';
-import { Form, Button, Card, Alert, Row, Col, Tooltip, OverlayTrigger, Badge } from 'react-bootstrap';
+import React, { useState, useEffect, useRef } from 'react';
+import { Form, Button, Card, Alert, Row, Col, Tooltip, OverlayTrigger, Badge, Spinner } from 'react-bootstrap';
+import { Editor } from '@monaco-editor/react';
 import queryTemplates from '../data/queryTemplates';
 import { 
   validateSparqlQuery, 
@@ -38,16 +39,14 @@ const endpointSuggestions = [
   { url: 'https://publications.europa.eu/webapi/rdf/sparql', description: 'CELLAR - EU Publications Office Reference Data' }
 ];
 
-// Line number helper function
-const LineNumbers = ({ lines }) => {
-  return (
-    <div className="line-numbers">
-      {Array.from({ length: lines }).map((_, i) => (
-        <div key={i} className="line-number">{i + 1}</div>
-      ))}
-    </div>
-  );
-};
+// SPARQL keywords for autocompletion
+const sparqlKeywords = [
+  'SELECT', 'DISTINCT', 'WHERE', 'FILTER', 'OPTIONAL', 'UNION', 'MINUS', 
+  'GRAPH', 'SERVICE', 'BIND', 'VALUES', 'GROUP BY', 'HAVING', 'ORDER BY', 
+  'LIMIT', 'OFFSET', 'ASK', 'CONSTRUCT', 'DESCRIBE', 'COUNT', 'SUM', 'AVG', 
+  'MIN', 'MAX', 'FROM', 'FROM NAMED', 'PREFIX', 'BASE', 'IN', 'NOT IN', 
+  'EXISTS', 'NOT EXISTS', 'FILTER NOT EXISTS', 'a'
+];
 
 const EnhancedSparqlEditor = ({ 
   sparqlEndpoint, 
@@ -58,36 +57,216 @@ const EnhancedSparqlEditor = ({
   isLoading 
 }) => {
   const [validationResult, setValidationResult] = useState({ valid: true, warnings: [] });
-  const [lineCount, setLineCount] = useState(1);
   const [performanceWarnings, setPerformanceWarnings] = useState([]);
   const [suggestedPrefixes, setSuggestedPrefixes] = useState([]);
   const [extractedVariables, setExtractedVariables] = useState([]);
   const [showVariables, setShowVariables] = useState(false);
   const [disableValidation, setDisableValidation] = useState(false);
-  const textareaRef = useRef(null);
+  const [editorLoaded, setEditorLoaded] = useState(false);
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  
+  // Configure Monaco editor when it loads
+  const handleEditorDidMount = (editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+    setEditorLoaded(true);
+    
+    // Configure SPARQL language features
+    configureSparqlLanguage(monaco);
+    
+    // Add autocompletion provider
+    monaco.languages.registerCompletionItemProvider('sparql', {
+      provideCompletionItems: (model, position) => {
+        const word = model.getWordUntilPosition(position);
+        const range = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: word.startColumn,
+          endColumn: word.endColumn
+        };
+        
+        const suggestions = [
+          // SPARQL keywords
+          ...sparqlKeywords.map(keyword => ({
+            label: keyword,
+            kind: monaco.languages.CompletionItemKind.Keyword,
+            insertText: keyword,
+            range: range
+          })),
+          
+          // Common prefixes
+          ...commonPrefixes.map(prefix => ({
+            label: `PREFIX ${prefix.prefix}: <${prefix.uri}>`,
+            kind: monaco.languages.CompletionItemKind.Snippet,
+            insertText: `PREFIX ${prefix.prefix}: <${prefix.uri}>`,
+            detail: prefix.description,
+            documentation: prefix.description,
+            range: range
+          })),
+          
+          // Variables in the query
+          ...extractedVariables.map(variable => ({
+            label: variable,
+            kind: monaco.languages.CompletionItemKind.Variable,
+            insertText: variable,
+            range: range
+          }))
+        ];
+        
+        return {
+          suggestions: suggestions
+        };
+      }
+    });
+    
+    // Add linting provider
+    const updateDecorations = () => {
+      if (!editor) return;
+      
+      const model = editor.getModel();
+      if (!model) return;
+      
+      const validationResult = validateSparqlQuery(model.getValue());
+      setValidationResult(validationResult);
+      
+      const decorations = [];
+      
+      if (!validationResult.valid && validationResult.error) {
+        // Add error decorations
+        const errorMatch = validationResult.error.match(/line (\d+)/i);
+        if (errorMatch) {
+          const lineNumber = parseInt(errorMatch[1], 10);
+          decorations.push({
+            range: new monaco.Range(lineNumber, 1, lineNumber, model.getLineMaxColumn(lineNumber)),
+            options: {
+              isWholeLine: true,
+              className: 'error-line',
+              glyphMarginClassName: 'error-glyph',
+              hoverMessage: { value: validationResult.error }
+            }
+          });
+        }
+      }
+      
+      // Add warning decorations
+      if (validationResult.warnings) {
+        validationResult.warnings.forEach(warning => {
+          const lineMatch = warning.match(/line (\d+)/i);
+          if (lineMatch) {
+            const lineNumber = parseInt(lineMatch[1], 10);
+            decorations.push({
+              range: new monaco.Range(lineNumber, 1, lineNumber, model.getLineMaxColumn(lineNumber)),
+              options: {
+                isWholeLine: true,
+                className: 'warning-line',
+                glyphMarginClassName: 'warning-glyph',
+                hoverMessage: { value: warning }
+              }
+            });
+          }
+        });
+      }
+      
+      editor.deltaDecorations([], decorations);
+    };
+    
+    const validateTimer = setTimeout(updateDecorations, 500);
+    editor.onDidChangeModelContent(() => {
+      clearTimeout(validateTimer);
+      setTimeout(updateDecorations, 500);
+    });
+    
+    // Initial validation
+    updateDecorations();
+  };
+  
+  // Configure Monaco for SPARQL syntax highlighting
+  const configureSparqlLanguage = (monaco) => {
+    // Register SPARQL language if it doesn't exist
+    if (!monaco.languages.getLanguages().some(lang => lang.id === 'sparql')) {
+      monaco.languages.register({ id: 'sparql' });
+      
+      // Define SPARQL tokens for syntax highlighting
+      monaco.languages.setMonarchTokensProvider('sparql', {
+        keywords: sparqlKeywords,
+        
+        operators: [
+          '=', '!=', '<', '>', '<=', '>=', '&&', '||', '!', '+', '-', '*', '/', '?', '^', '.'
+        ],
+        
+        tokenizer: {
+          root: [
+            // Keywords
+            [/\b(SELECT|WHERE|FILTER|OPTIONAL|UNION|MINUS|GRAPH|SERVICE|GROUP BY|HAVING|ORDER BY|LIMIT|OFFSET|ASK|CONSTRUCT|DESCRIBE|COUNT|SUM|AVG|MIN|MAX|DISTINCT|REDUCED|FROM|NAMED|PREFIX|BASE|BIND|VALUES|IN|NOT IN|EXISTS|NOT EXISTS)\b/i, 'keyword'],
+            
+            // Prefixed names
+            [/\b[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+\b/, 'string'],
+            
+            // Variables
+            [/\?[a-zA-Z0-9_]+/, 'variable'],
+            
+            // URI literals
+            [/<[^>]+>/, 'string.uri'],
+            
+            // Prefix declarations
+            [/\bPREFIX\s+([a-zA-Z0-9_-]+):/i, 'type'],
+            
+            // String literals
+            [/"([^"\\]|\\.)*"/, 'string'],
+            [/'([^'\\]|\\.)*'/, 'string'],
+            
+            // Comments
+            [/#.*$/, 'comment'],
+            
+            // Operators
+            [/[=<>!&|+\-*\/\^\?]/, 'operator'],
+            
+            // Numbers
+            [/\b\d+\.?\d*\b/, 'number']
+          ]
+        }
+      });
+      
+      // Define editor theme
+      monaco.editor.defineTheme('sparqlTheme', {
+        base: 'vs',
+        inherit: true,
+        rules: [
+          { token: 'keyword', foreground: '0000FF', fontStyle: 'bold' },
+          { token: 'variable', foreground: '7D8600' },
+          { token: 'type', foreground: '00627A' },
+          { token: 'string.uri', foreground: '067D17' },
+          { token: 'string', foreground: '9C2543' },
+          { token: 'comment', foreground: '8A8A8A', fontStyle: 'italic' }
+        ],
+        colors: {
+          'editor.foreground': '#000000',
+          'editor.background': '#FFFFFF',
+          'editor.lineHighlightBackground': '#F0F0F0'
+        }
+      });
+    }
+  };
   
   // Handle query change
-  const handleQueryChange = (e) => {
-    const newQuery = e.target.value;
-    setQuery(newQuery);
-    
-    // Update line count for line numbers
-    setLineCount((newQuery.match(/\n/g) || []).length + 1);
+  const handleQueryChange = (value) => {
+    setQuery(value);
     
     // Only perform validation if not disabled
-    if (!disableValidation && newQuery.length > 10) {
+    if (!disableValidation && value && value.length > 10) {
       try {
-        const result = validateSparqlQuery(newQuery);
+        const result = validateSparqlQuery(value);
         setValidationResult(result);
         
         // Check for performance issues
-        setPerformanceWarnings(checkPerformance(newQuery));
+        setPerformanceWarnings(checkPerformance(value));
         
         // Suggest prefixes based on URIs in query
-        setSuggestedPrefixes(suggestPrefixes(newQuery));
+        setSuggestedPrefixes(suggestPrefixes(value));
         
         // Extract variables for assistance
-        setExtractedVariables(extractVariables(newQuery));
+        setExtractedVariables(extractVariables(value));
       } catch (err) {
         console.warn("Validation error:", err);
         // Don't block the user if validation fails
@@ -99,9 +278,6 @@ const EnhancedSparqlEditor = ({
   useEffect(() => {
     if (query) {
       try {
-        // Update line count
-        setLineCount((query.match(/\n/g) || []).length + 1);
-        
         // Only perform validation if not disabled
         if (!disableValidation) {
           // Validate the query
@@ -129,9 +305,6 @@ const EnhancedSparqlEditor = ({
     const selectedTemplate = e.target.value;
     const templateQuery = queryTemplates[selectedTemplate] || '';
     setQuery(templateQuery);
-    
-    // Update line count
-    setLineCount((templateQuery.match(/\n/g) || []).length + 1);
     
     // Validate the selected template
     if (templateQuery && !disableValidation) {
@@ -176,27 +349,55 @@ const EnhancedSparqlEditor = ({
     if (!query.includes(`PREFIX ${prefix}:`)) {
       const prefixDeclaration = `PREFIX ${prefix}: <${uri}>\n`;
       
-      // Add at the beginning or after other prefixes
-      const lines = query.split('\n');
-      let lastPrefixIndex = -1;
-      
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i].trim().toUpperCase().startsWith('PREFIX')) {
-          lastPrefixIndex = i;
+      // Insert at the beginning or after other prefixes
+      if (editorRef.current) {
+        const model = editorRef.current.getModel();
+        const lines = model.getLinesContent();
+        let lastPrefixLine = -1;
+        
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].trim().toUpperCase().startsWith('PREFIX')) {
+            lastPrefixLine = i;
+          }
         }
-      }
-      
-      if (lastPrefixIndex >= 0) {
-        // Insert after the last prefix
-        lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
+        
+        const position = lastPrefixLine >= 0 
+          ? { lineNumber: lastPrefixLine + 1, column: 1 } 
+          : { lineNumber: 1, column: 1 };
+        
+        const range = {
+          startLineNumber: position.lineNumber,
+          startColumn: position.column,
+          endLineNumber: position.lineNumber,
+          endColumn: position.column
+        };
+        
+        // Apply the edit directly to the editor
+        editorRef.current.executeEdits('', [
+          { range, text: lastPrefixLine >= 0 ? prefixDeclaration : prefixDeclaration }
+        ]);
       } else {
-        // Insert at the beginning
-        lines.unshift(prefixDeclaration);
+        // Fallback if editor reference is not available
+        const lines = query.split('\n');
+        let lastPrefixIndex = -1;
+        
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].trim().toUpperCase().startsWith('PREFIX')) {
+            lastPrefixIndex = i;
+          }
+        }
+        
+        if (lastPrefixIndex >= 0) {
+          // Insert after the last prefix
+          lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
+        } else {
+          // Insert at the beginning
+          lines.unshift(prefixDeclaration);
+        }
+        
+        const updatedQuery = lines.join('\n');
+        setQuery(updatedQuery);
       }
-      
-      const updatedQuery = lines.join('\n');
-      setQuery(updatedQuery);
-      setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
     }
   };
 
@@ -205,7 +406,11 @@ const EnhancedSparqlEditor = ({
     try {
       const formatted = formatSparqlQuery(query);
       setQuery(formatted);
-      setLineCount((formatted.match(/\n/g) || []).length + 1);
+      
+      // Update the editor value
+      if (editorRef.current) {
+        editorRef.current.setValue(formatted);
+      }
     } catch (err) {
       console.warn("Formatting error:", err);
       // Don't change the query if formatting fails
@@ -217,7 +422,11 @@ const EnhancedSparqlEditor = ({
     try {
       const completeQuery = addMissingStructure(query);
       setQuery(completeQuery);
-      setLineCount((completeQuery.match(/\n/g) || []).length + 1);
+      
+      // Update the editor value
+      if (editorRef.current) {
+        editorRef.current.setValue(completeQuery);
+      }
       
       // Validate the new query
       if (!disableValidation) {
@@ -237,7 +446,11 @@ const EnhancedSparqlEditor = ({
         let updatedQuery = query.trim();
         updatedQuery += '\nLIMIT 100';
         setQuery(updatedQuery);
-        setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
+        
+        // Update the editor value
+        if (editorRef.current) {
+          editorRef.current.setValue(updatedQuery);
+        }
       }
     } catch (err) {
       console.warn("Limit addition error:", err);
@@ -370,20 +583,32 @@ const EnhancedSparqlEditor = ({
               </div>
             )}
             
-            <div className="editor-container d-flex border rounded">
-              <div className="line-numbers-container p-2 bg-light border-end">
-                <LineNumbers lines={lineCount} />
-              </div>
-              <Form.Control
-                ref={textareaRef}
-                as="textarea"
-                rows={15}
-                placeholder="Enter your SPARQL query here..."
+            <div className="editor-container rounded border">
+              {!editorLoaded && (
+                <div className="text-center p-3">
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  Loading editor...
+                </div>
+              )}
+              <Editor
+                height="300px"
+                language="sparql"
+                theme="sparqlTheme"
                 value={query}
                 onChange={handleQueryChange}
-                className="border-0"
-                style={{ resize: 'vertical', fontFamily: 'monospace' }}
-                spellCheck="false"
+                onMount={handleEditorDidMount}
+                options={{
+                  minimap: { enabled: false },
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  scrollbar: {
+                    vertical: 'auto',
+                    horizontal: 'auto'
+                  },
+                  folding: true,
+                  wordWrap: 'on'
+                }}
               />
             </div>
             
@@ -468,7 +693,7 @@ const EnhancedSparqlEditor = ({
             >
               {isLoading ? (
                 <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  <Spinner animation="border" size="sm" className="me-2" role="status" aria-hidden="true" />
                   Executing...
                 </>
               ) : (
@@ -482,7 +707,9 @@ const EnhancedSparqlEditor = ({
                 onClick={() => {
                   if (window.confirm('Are you sure you want to clear the query?')) {
                     setQuery('');
-                    setLineCount(1);
+                    if (editorRef.current) {
+                      editorRef.current.setValue('');
+                    }
                   }
                 }}
                 className="me-2"
