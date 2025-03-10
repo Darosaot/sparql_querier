@@ -14,14 +14,26 @@ const logger = {
   }
 };
 
+// Validate dashboard structure
+const isValidDashboard = (dashboard) => {
+  return !!(
+    dashboard && 
+    typeof dashboard === 'object' &&
+    dashboard.id && 
+    dashboard.name && 
+    Array.isArray(dashboard.panels) &&
+    typeof dashboard.dateCreated === 'string' &&
+    typeof dashboard.dateModified === 'string'
+  );
+};
+
 // Get all dashboards from localStorage
 export const getDashboards = () => {
   try {
     const dashboardsJson = localStorage.getItem('dashboards');
     
     logger.log('Retrieving dashboards from localStorage', {
-      storedData: dashboardsJson,
-      hasData: !!dashboardsJson
+      hasStoredData: !!dashboardsJson
     });
 
     if (!dashboardsJson) {
@@ -32,25 +44,22 @@ export const getDashboards = () => {
     try {
       const dashboards = JSON.parse(dashboardsJson);
       
+      // Validate and filter dashboards
+      const validDashboards = dashboards.filter(isValidDashboard);
+      
       logger.log('Parsed dashboards', {
-        count: dashboards.length,
-        dashboardIds: dashboards.map(d => d.id)
+        totalCount: dashboards.length,
+        validCount: validDashboards.length,
+        validDashboardIds: validDashboards.map(d => d.id)
       });
 
-      // Validate dashboard structure
-      const validDashboards = dashboards.filter(dashboard => {
-        const isValid = !!(
-          dashboard.id && 
-          dashboard.name && 
-          Array.isArray(dashboard.panels)
-        );
-        
-        if (!isValid) {
-          logger.warn('Invalid dashboard found', { invalidDashboard: dashboard });
-        }
-        
-        return isValid;
-      });
+      // If there are invalid dashboards, update localStorage
+      if (validDashboards.length !== dashboards.length) {
+        logger.warn('Some dashboards were invalid and removed', {
+          removedCount: dashboards.length - validDashboards.length
+        });
+        localStorage.setItem('dashboards', JSON.stringify(validDashboards));
+      }
 
       return validDashboards;
     } catch (parseError) {
@@ -70,6 +79,37 @@ export const getDashboards = () => {
       errorStack: error.stack
     });
     return [];
+  }
+};
+
+// Save dashboards to localStorage
+export const saveDashboards = (dashboards) => {
+  try {
+    // Validate dashboards before saving
+    const validDashboards = dashboards.filter(isValidDashboard);
+
+    logger.log('Saving dashboards to localStorage', {
+      totalDashboards: dashboards.length,
+      validDashboards: validDashboards.length,
+      dashboardIds: validDashboards.map(d => d.id)
+    });
+
+    // If invalid dashboards were found, log a warning
+    if (validDashboards.length !== dashboards.length) {
+      logger.warn('Some dashboards were invalid and not saved', {
+        removedCount: dashboards.length - validDashboards.length
+      });
+    }
+
+    localStorage.setItem('dashboards', JSON.stringify(validDashboards));
+    return true;
+  } catch (error) {
+    logger.error('Error saving dashboards', {
+      errorMessage: error.message,
+      errorStack: error.stack,
+      dashboardCount: dashboards.length
+    });
+    return false;
   }
 };
 
@@ -141,10 +181,10 @@ export const createDashboard = (name, description = '') => {
 
 // Save or update a dashboard
 export const saveDashboard = (dashboard) => {
-  if (!dashboard || !dashboard.name) {
+  if (!isValidDashboard(dashboard)) {
     logger.error('Cannot save dashboard: Invalid dashboard object', { 
       dashboard,
-      hasName: !!dashboard?.name 
+      validationResult: isValidDashboard(dashboard)
     });
     return false;
   }
@@ -194,36 +234,10 @@ export const saveDashboard = (dashboard) => {
   }
 };
 
-// Save dashboards to localStorage
-export const saveDashboards = (dashboards) => {
-  try {
-    // Validate dashboards before saving
-    const validDashboards = dashboards.filter(dashboard => 
-      dashboard && 
-      dashboard.id && 
-      dashboard.name && 
-      Array.isArray(dashboard.panels)
-    );
+// The rest of the existing methods remain the same, 
+// but you can add similar logging to them if desired
 
-    logger.log('Saving dashboards to localStorage', {
-      totalDashboards: dashboards.length,
-      validDashboards: validDashboards.length,
-      dashboardIds: validDashboards.map(d => d.id)
-    });
-
-    localStorage.setItem('dashboards', JSON.stringify(validDashboards));
-    return true;
-  } catch (error) {
-    logger.error('Error saving dashboards', {
-      errorMessage: error.message,
-      errorStack: error.stack,
-      dashboardCount: dashboards.length
-    });
-    return false;
-  }
-};
-
-// Create a new panel for a dashboard
+// Example of additional logging for other methods
 export const createPanel = (
   dashboardId, 
   title, 
@@ -287,7 +301,7 @@ export const createPanel = (
   return panel;
 };
 
-// The rest of the existing methods remain the same
+// Keep the rest of the existing methods from the original file
 
 // Ensure error logging is consistent throughout other methods
 export const deleteDashboard = (dashboardId) => {
