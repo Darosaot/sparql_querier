@@ -108,16 +108,69 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
   }, [dashboard, editMode, gridInstance]);
   
   // Load dashboard data
-  useEffect(() => {
-    loadDashboard();
-    
-    // Clean up GridStack on unmount
-    return () => {
-      if (gridInstance) {
-        gridInstance.destroy();
+useEffect(() => {
+  if (dashboard) {
+    // Use a longer delay to ensure DOM elements are fully ready
+    const timer = setTimeout(() => {
+      try {
+        // Clear any existing grid first
+        const gridElement = document.querySelector('.grid-stack');
+        if (gridElement && gridElement.gridstack) {
+          gridElement.gridstack.destroy();
+        }
+        
+        initializeGrid();
+        
+        // Force a second initialization after a delay to ensure proper rendering
+        setTimeout(() => {
+          // Re-add panels to grid with explicit positions
+          if (gridInstance) {
+            dashboard.panels.forEach((panel, index) => {
+              const element = document.getElementById(`panel-${panel.id}`);
+              if (element) {
+                // Set positions based on index to avoid overlap
+                const position = {
+                  x: 0, 
+                  y: index * 4, // Position panels vertically
+                  w: 12,        // Use full width
+                  h: 4          // Standard height
+                };
+                
+                panel.position = position; // Update panel position in data
+                
+                // Try to remove and re-add the widget with new position
+                try {
+                  gridInstance.removeWidget(element, false);
+                } catch (err) {
+                  console.log('Widget was not previously added');
+                }
+                
+                gridInstance.addWidget(element, position);
+              }
+            });
+            
+            // Ensure grid is visible and not in static mode
+            gridInstance.setStatic(false);
+            
+            // Make grid immediately visible
+            const gridContainer = document.querySelector('.grid-stack');
+            if (gridContainer) {
+              gridContainer.style.visibility = 'visible';
+              gridContainer.style.display = 'block';
+            }
+            
+            // Save the updated positions
+            saveDashboard(dashboard);
+          }
+        }, 500);
+      } catch (err) {
+        console.error('Error initializing grid:', err);
       }
-    };
-  }, [dashboardId]);
+    }, 500); // Longer initial delay
+    
+    return () => clearTimeout(timer);
+  }
+}, [dashboard, initializeGrid]);
   
   // Initialize grid after dashboard is loaded
   useEffect(() => {
