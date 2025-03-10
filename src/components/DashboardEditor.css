@@ -34,8 +34,9 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
 
-/* Force absolute positioning in the GridStack container */
-.grid-stack-item {
+/* Added explicit styles for panel positions */
+.grid-stack > .grid-stack-item {
+  min-width: 8.33% !important; /* 1/12 for 12-column grid */
   position: absolute !important;
 }
 
@@ -43,13 +44,7 @@
 .grid-stack-placeholder,
 .grid-stack-item.ui-draggable-dragging {
   visibility: visible !important;
-}
-
-/* Only show handles and resize controls in edit mode */
-.grid-stack:not(.grid-stack-animate) .grid-stack-item.ui-draggable-dragging:after,
-.grid-stack:not(.grid-stack-animate) .grid-stack-item.ui-resizable-resizing:after,
-.grid-stack:not(.grid-stack-animate) .grid-stack-item:after {
-  display: none !important;
+  display: block !important;
 }
 
 /* Make the panel header grabbable */
@@ -59,6 +54,42 @@
 
 .panel-drag-handle:active {
   cursor: grabbing;
+}
+
+/* Correctly visualize panels within grid */
+.dashboard-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.125);
+  border-radius: 0.25rem;
+}
+
+.dashboard-panel .card-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+  padding: 0.75rem 1rem;
+}
+
+.dashboard-panel .card-body {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+}
+
+/* Fix for GridStack 6.0+ with animation disabled */
+.grid-stack:not(.grid-stack-animate) .grid-stack-item {
+  transition: none !important;
+}
+
+/* Dashboard empty state styling */
+.dashboard-empty-state {
+  padding: 40px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #ccc;
 }
 
 /* Dashboard header */
@@ -83,15 +114,6 @@
 .grid-stack:not(.grid-stack-initialized) .grid-stack-item {
   position: relative !important;
   margin-bottom: 15px;
-}
-
-/* Add styles for empty dashboard state */
-.dashboard-empty-state {
-  padding: 40px;
-  text-align: center;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border: 2px dashed #ccc;
 }
 
 /* Dashboard panel styles */
