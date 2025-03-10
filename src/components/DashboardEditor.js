@@ -1,9 +1,20 @@
 // src/components/DashboardEditor.js
-import React, { useState, useEffect } from 'react';
-import { Card, Button, Row, Col, Form, Alert, Modal } from 'react-bootstrap';
-import { getDashboardById, saveDashboard, createPanel, deletePanel, shareDashboard } from '../utils/dashboardUtils';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Button, Row, Col, Form, Alert, Modal, OverlayTrigger, Tooltip, Dropdown } from 'react-bootstrap';
+import { GridStack, GridStackElement } from 'gridstack';
+import 'gridstack/dist/gridstack.min.css';
+import { 
+  getDashboardById, 
+  saveDashboard, 
+  createPanel, 
+  deletePanel, 
+  shareDashboard,
+  updatePanelPosition,
+  scheduleDashboardRefresh 
+} from '../utils/dashboardUtils';
 import { executeQuery } from '../api/sparqlService';
 import DashboardPanel from './DashboardPanel';
+import './DashboardEditor.css';
 
 const DashboardEditor = ({ dashboardId, onBack }) => {
   const [dashboard, setDashboard] = useState(null);
@@ -13,6 +24,12 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
   const [showAddPanelModal, setShowAddPanelModal] = useState(false);
   const [dashboardName, setDashboardName] = useState('');
   const [dashboardDescription, setDashboardDescription] = useState('');
+  const [gridInstance, setGridInstance] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [shareMode, setShareMode] = useState('view');
+  const [refreshInterval, setRefreshInterval] = useState(0);
+  const [showRefreshModal, setShowRefreshModal] = useState(false);
   
   // Panel creation state
   const [newPanelTitle, setNewPanelTitle] = useState('');
@@ -26,10 +43,100 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
   const [yAxis, setYAxis] = useState('');
   const [selectedColor, setSelectedColor] = useState('#1f77b4');
   
+  // Initialize GridStack
+  const initializeGrid = useCallback(() => {
+    if (!dashboard) return;
+    
+    // Clean up any previous instance
+    if (gridInstance) {
+      gridInstance.destroy();
+    }
+    
+    // Initialize new grid
+    const grid = GridStack.init({
+      column: 12,
+      cellHeight: 50,
+      animate: true,
+      disableOneColumnMode: false,
+      resizable: { handles: 'all' },
+      draggable: { handle: '.panel-drag-handle' },
+      staticGrid: !editMode // Only allow dragging in edit mode
+    });
+    
+    setGridInstance(grid);
+    
+    // Add change event to save positions
+    grid.on('change', (event, items) => {
+      if (!items || !items.length) return;
+      
+      const updatedDashboard = { ...dashboard };
+      
+      items.forEach(item => {
+        const panelId = item.id;
+        const panelIndex = updatedDashboard.panels.findIndex(p => p.id === panelId);
+        
+        if (panelIndex !== -1) {
+          // Update panel position
+          updatedDashboard.panels[panelIndex].position = {
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h
+          };
+        }
+      });
+      
+      // Update local state
+      setDashboard(updatedDashboard);
+      
+      // Save to storage
+      saveDashboard(updatedDashboard);
+    });
+    
+    // Add panels to grid based on saved positions
+    dashboard.panels.forEach(panel => {
+      const element = document.getElementById(`panel-${panel.id}`);
+      if (element) {
+        const { x, y, w, h } = panel.position || { x: 0, y: 0, w: 6, h: 4 };
+        grid.addWidget(element, { x, y, w, h, id: panel.id });
+      }
+    });
+    
+    // Update grid mode based on edit state
+    grid.setStatic(!editMode);
+    
+  }, [dashboard, editMode, gridInstance]);
+  
   // Load dashboard data
   useEffect(() => {
     loadDashboard();
+    
+    // Clean up GridStack on unmount
+    return () => {
+      if (gridInstance) {
+        gridInstance.destroy();
+      }
+    };
   }, [dashboardId]);
+  
+  // Initialize grid after dashboard is loaded
+  useEffect(() => {
+    if (dashboard) {
+      // Initialize grid after a short delay to ensure DOM elements are ready
+      const timer = setTimeout(() => {
+        initializeGrid();
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [dashboard, initializeGrid]);
+  
+  // Update grid when edit mode changes
+  useEffect(() => {
+    if (gridInstance) {
+      gridInstance.setStatic(!editMode);
+    }
+  }, [editMode, gridInstance]);
   
   const loadDashboard = () => {
     setLoading(true);
@@ -39,6 +146,7 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
       setDashboard(dashboardData);
       setDashboardName(dashboardData.name);
       setDashboardDescription(dashboardData.description || '');
+      setRefreshInterval(dashboardData.refreshInterval || 0);
       setError(null);
     } else {
       setError('Dashboard not found');
@@ -57,7 +165,8 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
     const updatedDashboard = {
       ...dashboard,
       name: dashboardName,
-      description: dashboardDescription
+      description: dashboardDescription,
+      refreshInterval: refreshInterval
     };
     
     if (saveDashboard(updatedDashboard)) {
@@ -72,6 +181,15 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
   // Handle deleting a panel
   const handleDeletePanel = (panelId) => {
     if (window.confirm('Are you sure you want to delete this panel?')) {
+      // Remove from grid
+      if (gridInstance) {
+        const element = document.getElementById(`panel-${panelId}`);
+        if (element) {
+          gridInstance.removeWidget(element, false);
+        }
+      }
+      
+      // Delete from storage
       if (deletePanel(dashboardId, panelId)) {
         loadDashboard();
       }
@@ -80,7 +198,29 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
   
   // Handle sharing the dashboard
   const handleShareDashboard = () => {
-    shareDashboard(dashboardId);
+    const url = shareDashboard(dashboardId, shareMode);
+    setShareUrl(url);
+    setShowShareModal(true);
+  };
+  
+  // Handle setting a refresh schedule
+  const handleSetRefreshSchedule = () => {
+    const updatedDashboard = {
+      ...dashboard,
+      refreshInterval: refreshInterval
+    };
+    
+    if (saveDashboard(updatedDashboard)) {
+      setDashboard(updatedDashboard);
+      setShowRefreshModal(false);
+      
+      // Activate the refresh schedule if an interval is set
+      if (refreshInterval > 0) {
+        scheduleDashboardRefresh(dashboardId, refreshInterval);
+      }
+    } else {
+      setError('Failed to set refresh schedule');
+    }
   };
   
   // Test panel query
@@ -144,12 +284,21 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
       color: selectedColor
     };
     
+    // Find a default position
+    const position = {
+      x: 0,
+      y: 0,
+      w: 6,
+      h: 4
+    };
+    
     const panel = createPanel(
       dashboardId,
       newPanelTitle,
       newPanelType,
       query,
-      visualization
+      visualization,
+      position
     );
     
     if (panel) {
@@ -174,6 +323,18 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
     setSelectedColor('#1f77b4');
   };
   
+  // Handle refreshing all panels
+  const handleRefreshAllPanels = () => {
+    // Trigger refresh for all panels
+    if (dashboard && dashboard.panels) {
+      const panelElements = document.querySelectorAll('[data-panel-refresh]');
+      panelElements.forEach(element => {
+        // Trigger a click event on each refresh button
+        element.click();
+      });
+    }
+  };
+  
   if (loading) {
     return <div className="text-center p-5">Loading dashboard...</div>;
   }
@@ -193,37 +354,93 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
   
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <div>
-          <Button variant="outline-secondary" onClick={onBack} className="me-2">
-            ← Back
-          </Button>
-          {editMode ? (
-            <>
-              <Button variant="success" onClick={handleSaveDashboard} className="me-2">
-                Save Changes
-              </Button>
-              <Button variant="outline-secondary" onClick={() => {
-                setEditMode(false);
-                setDashboardName(dashboard.name);
-                setDashboardDescription(dashboard.description || '');
-              }}>
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <Button variant="outline-primary" onClick={() => setEditMode(true)}>
-              Edit Dashboard
+      <div className="dashboard-header mb-3">
+        <div className="d-flex justify-content-between align-items-center flex-wrap">
+          <div className="d-flex align-items-center mb-2 mb-md-0">
+            <Button variant="outline-secondary" onClick={onBack} className="me-2">
+              ← Back
             </Button>
-          )}
-        </div>
-        <div className="d-flex gap-2">
-          <Button variant="outline-success" onClick={handleShareDashboard}>
-            Share Dashboard
-          </Button>
-          <Button variant="primary" onClick={() => setShowAddPanelModal(true)}>
-            Add Panel
-          </Button>
+            {editMode ? (
+              <>
+                <Button variant="success" onClick={handleSaveDashboard} className="me-2">
+                  Save Changes
+                </Button>
+                <Button variant="outline-secondary" onClick={() => {
+                  setEditMode(false);
+                  setDashboardName(dashboard.name);
+                  setDashboardDescription(dashboard.description || '');
+                }}>
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline-primary" onClick={() => setEditMode(true)}>
+                Edit Dashboard
+              </Button>
+            )}
+          </div>
+          <div className="dashboard-actions">
+            <OverlayTrigger
+              placement="top"
+              overlay={<Tooltip>Refresh all panels</Tooltip>}
+            >
+              <Button 
+                variant="outline-info" 
+                className="me-2"
+                onClick={handleRefreshAllPanels}
+              >
+                <i className="bi bi-arrow-clockwise"></i>
+              </Button>
+            </OverlayTrigger>
+            
+            <Dropdown className="d-inline me-2">
+              <Dropdown.Toggle variant="outline-success" id="dropdown-share">
+                Share
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                <Dropdown.Item onClick={() => {
+                  setShareMode('view');
+                  handleShareDashboard();
+                }}>
+                  Share View Only
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => {
+                  setShareMode('edit');
+                  handleShareDashboard();
+                }}>
+                  Share with Edit Access
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => {
+                  setShareMode('embed');
+                  handleShareDashboard();
+                }}>
+                  Get Embed Code
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+            
+            <Dropdown className="d-inline me-2">
+              <Dropdown.Toggle variant="outline-secondary" id="dropdown-options">
+                Options
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                <Dropdown.Item onClick={() => setShowRefreshModal(true)}>
+                  Schedule Refresh
+                </Dropdown.Item>
+                <Dropdown.Item onClick={handleRefreshAllPanels}>
+                  Refresh All Panels
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item onClick={() => window.print()}>
+                  Print Dashboard
+                </Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+            
+            <Button variant="primary" onClick={() => setShowAddPanelModal(true)}>
+              Add Panel
+            </Button>
+          </div>
         </div>
       </div>
       
@@ -233,7 +450,7 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
         </Alert>
       )}
       
-      <Card className="mb-4">
+      <Card className="mb-4 dashboard-title-card">
         <Card.Body>
           {editMode ? (
             <Form>
@@ -269,6 +486,12 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
                 Created: {new Date(dashboard.dateCreated).toLocaleString()}
                 {' | '}
                 Last modified: {new Date(dashboard.dateModified).toLocaleString()}
+                {dashboard.refreshInterval > 0 && (
+                  <>
+                    {' | '}
+                    Auto-refresh: {dashboard.refreshInterval} minutes
+                  </>
+                )}
               </div>
             </>
           )}
@@ -286,18 +509,23 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
           </Button>
         </div>
       ) : (
-        <div className="dashboard-grid">
-          <Row>
-            {dashboard.panels.map(panel => (
-              <Col xs={12} md={6} xl={4} key={panel.id} className="mb-4">
+        <div className="grid-stack">
+          {dashboard.panels.map(panel => (
+            <div 
+              key={panel.id} 
+              className="grid-stack-item" 
+              id={`panel-${panel.id}`}
+              data-gs-id={panel.id}
+            >
+              <div className="grid-stack-item-content">
                 <DashboardPanel
                   panel={panel}
                   onDelete={() => handleDeletePanel(panel.id)}
                   isEditMode={editMode}
                 />
-              </Col>
-            ))}
-          </Row>
+              </div>
+            </div>
+          ))}
         </div>
       )}
       
@@ -306,6 +534,7 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
         show={showAddPanelModal} 
         onHide={() => setShowAddPanelModal(false)}
         size="lg"
+        className="panel-modal"
       >
         <Modal.Header closeButton>
           <Modal.Title>Add Dashboard Panel</Modal.Title>
@@ -336,6 +565,9 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
                 <option value="line">Line Chart</option>
                 <option value="bar">Bar Chart</option>
                 <option value="pie">Pie Chart</option>
+                <option value="scatter">Scatter Plot</option>
+                <option value="bubble">Bubble Chart</option>
+                <option value="network">Network Graph</option>
                 <option value="stats">Statistics</option>
               </Form.Select>
             </Form.Group>
@@ -381,7 +613,7 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
                   Query executed successfully! Retrieved {queryResults.data.length} results.
                 </Alert>
                 
-                {newPanelType !== 'table' && newPanelType !== 'stats' && (
+                {['line', 'bar', 'pie', 'scatter', 'bubble', 'network'].includes(newPanelType) && (
                   <Row>
                     <Col md={6}>
                       <Form.Group className="mb-3">
@@ -411,6 +643,20 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
                       </Form.Group>
                     </Col>
                     
+                    {['bubble', 'network'].includes(newPanelType) && (
+                      <Col md={6}>
+                        <Form.Group className="mb-3">
+                          <Form.Label>Size Dimension</Form.Label>
+                          <Form.Select>
+                            <option value="">None (use fixed size)</option>
+                            {queryResults.columns.map(column => (
+                              <option key={column} value={column}>{column}</option>
+                            ))}
+                          </Form.Select>
+                        </Form.Group>
+                      </Col>
+                    )}
+                    
                     <Col md={6}>
                       <Form.Group className="mb-3">
                         <Form.Label>Chart Color</Form.Label>
@@ -437,6 +683,95 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
             disabled={!queryResults}
           >
             Add Panel
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      
+      {/* Share Modal */}
+      <Modal
+        show={showShareModal}
+        onHide={() => setShowShareModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Share Dashboard</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>
+            {shareMode === 'view' && 'Anyone with this link can view the dashboard:'}
+            {shareMode === 'edit' && 'Anyone with this link can view and edit the dashboard:'}
+            {shareMode === 'embed' && 'Use this code to embed the dashboard in your website:'}
+          </p>
+          
+          {shareMode === 'embed' ? (
+            <Form.Control
+              as="textarea"
+              rows={3}
+              value={`<iframe src="${shareUrl}" width="100%" height="600" frameborder="0"></iframe>`}
+              readOnly
+              onClick={(e) => e.target.select()}
+            />
+          ) : (
+            <Form.Control
+              type="text"
+              value={shareUrl}
+              readOnly
+              onClick={(e) => e.target.select()}
+            />
+          )}
+          
+          <div className="d-grid mt-3">
+            <Button 
+              variant="primary" 
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  shareMode === 'embed' 
+                    ? `<iframe src="${shareUrl}" width="100%" height="600" frameborder="0"></iframe>`
+                    : shareUrl
+                );
+                alert('Copied to clipboard!');
+              }}
+            >
+              Copy to Clipboard
+            </Button>
+          </div>
+        </Modal.Body>
+      </Modal>
+      
+      {/* Refresh Schedule Modal */}
+      <Modal
+        show={showRefreshModal}
+        onHide={() => setShowRefreshModal(false)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Schedule Dashboard Refresh</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label>Auto-refresh Interval (minutes)</Form.Label>
+            <Form.Control
+              type="number"
+              min="0"
+              max="1440"
+              value={refreshInterval}
+              onChange={(e) => setRefreshInterval(parseInt(e.target.value) || 0)}
+            />
+            <Form.Text className="text-muted">
+              Set to 0 to disable auto-refresh. Maximum is 1440 minutes (24 hours).
+            </Form.Text>
+          </Form.Group>
+          
+          <Alert variant="info">
+            <strong>Note:</strong> Auto-refresh will only work while the dashboard is open in your browser.
+          </Alert>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowRefreshModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSetRefreshSchedule}>
+            Save Schedule
           </Button>
         </Modal.Footer>
       </Modal>
