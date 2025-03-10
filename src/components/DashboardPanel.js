@@ -154,6 +154,8 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
   
   // Render different content based on panel type
   const renderPanelContent = () => {
+    // Add defensive coding to catch any rendering errors
+  try {
     if (loading && !data) {
       return (
         <div className="text-center p-5">
@@ -181,7 +183,10 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
       return (
         <div className="alert alert-warning">
           <strong>No data available</strong>
-          <p>The query returned no results.</p>
+          <p>The query returned no results or hasn't been executed yet. Click refresh to execute the query.</p>
+          <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
+            Refresh Data
+          </Button>
         </div>
       );
     }
@@ -206,12 +211,28 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
       default:
         return (
           <div className="alert alert-info">
-            <strong>Unknown panel type:</strong> {panel.type}
-            <p>This panel type is not supported.</p>
+            <strong>Panel type:</strong> {panel.type}
+            <p>This panel is configured but the visualization hasn't been loaded yet. Click refresh to load the data.</p>
+            <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
+              Load Data
+            </Button>
           </div>
         );
     }
-  };
+  } catch (err) {
+    console.error("Error rendering panel content:", err);
+    return (
+      <div className="alert alert-danger">
+        <strong>Rendering Error:</strong> {err.message}
+        <div className="mt-2">
+          <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+};
   
   // Render a table
   const renderTable = () => {
