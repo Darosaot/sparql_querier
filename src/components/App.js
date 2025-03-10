@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Nav, Tab } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Header from './Header';
@@ -6,9 +6,10 @@ import QueryEditor from './QueryEditor';
 import ResultsTable from './ResultsTable';
 import Visualization from './Visualization';
 import RegressionAnalysis from './RegressionAnalysis';
-import DataOperations from './DataOperations'; // Import the new component
+import DataOperations from './DataOperations';
 import ExportOptions from './ExportOptions';
 import BulkDataExport from './BulkDataExport';
+import QueryHistory from './QueryHistory'; // Import QueryHistory component
 import { executeQuery, isValidSparql } from '../api/sparqlService';
 
 function App() {
@@ -19,6 +20,28 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('sparql-query');
+  
+  // State for query history
+  const [queryHistory, setQueryHistory] = useState([]);
+  
+  // Load query history from localStorage when component mounts
+  useEffect(() => {
+    const savedQueries = localStorage.getItem('queryHistory');
+    if (savedQueries) {
+      try {
+        setQueryHistory(JSON.parse(savedQueries));
+      } catch (err) {
+        console.error('Error loading query history:', err);
+        // If there's an error parsing, initialize with empty array
+        setQueryHistory([]);
+      }
+    }
+  }, []);
+  
+  // Save query history to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
+  }, [queryHistory]);
   
   // Function to handle query execution
   const handleExecuteQuery = async () => {
@@ -40,6 +63,26 @@ function App() {
       
       if (result.success) {
         setQueryResults(result);
+        
+        // Save the query to history
+        const timestamp = new Date().toISOString();
+        const queryName = getQueryName(query);
+        
+        // Create a new history entry
+        const historyEntry = {
+          id: timestamp, // Use timestamp as ID
+          timestamp,
+          name: queryName,
+          query,
+          endpoint: sparqlEndpoint,
+          resultCount: result.data.length,
+          executionTime: result.executionTime,
+          bookmarked: false // Not bookmarked by default
+        };
+        
+        // Add to history (newest first)
+        setQueryHistory(prevHistory => [historyEntry, ...prevHistory]);
+        
         if (result.data.length === 0) {
           setError('No results found.');
         }
@@ -53,6 +96,50 @@ function App() {
     }
   };
   
+  // Helper function to extract a name from the query
+  const getQueryName = (queryText) => {
+    // Look for SELECT or CONSTRUCT keyword
+    const selectMatch = queryText.match(/SELECT\s+.+?\s+WHERE/i);
+    if (selectMatch) {
+      // Extract and return up to 30 characters after SELECT
+      const extractedText = selectMatch[0]
+        .replace(/SELECT\s+/i, '')
+        .replace(/\s+WHERE$/, '')
+        .trim();
+      return extractedText.length > 30 
+        ? extractedText.substring(0, 30) + '...' 
+        : extractedText;
+    }
+    
+    // If no pattern is found, return a generic name with timestamp
+    return `Query ${new Date().toLocaleTimeString()}`;
+  };
+  
+  // Handle loading a query from history
+  const handleLoadQuery = (historyItem) => {
+    setQuery(historyItem.query);
+    setSparqlEndpoint(historyItem.endpoint);
+    setActiveTab('sparql-query');
+  };
+  
+  // Handle deleting a query from history
+  const handleDeleteQuery = (queryId) => {
+    setQueryHistory(prevHistory => 
+      prevHistory.filter(item => item.id !== queryId)
+    );
+  };
+  
+  // Handle bookmarking a query
+  const handleBookmarkQuery = (queryId) => {
+    setQueryHistory(prevHistory => 
+      prevHistory.map(item => 
+        item.id === queryId 
+          ? { ...item, bookmarked: !item.bookmarked } 
+          : item
+      )
+    );
+  };
+  
   return (
     <div className="App">
       <Header />
@@ -63,6 +150,9 @@ function App() {
               <Nav variant="tabs">
                 <Nav.Item>
                   <Nav.Link eventKey="sparql-query">SPARQL Query</Nav.Link>
+                </Nav.Item>
+                <Nav.Item>
+                  <Nav.Link eventKey="query-history">Query History</Nav.Link>
                 </Nav.Item>
                 <Nav.Item>
                   <Nav.Link eventKey="bulk-export">Bulk Data Export</Nav.Link>
@@ -122,6 +212,15 @@ function App() {
                       </div>
                     </>
                   )}
+                </Tab.Pane>
+                
+                <Tab.Pane eventKey="query-history">
+                  <QueryHistory 
+                    queries={queryHistory}
+                    onLoadQuery={handleLoadQuery}
+                    onDeleteQuery={handleDeleteQuery}
+                    onBookmarkQuery={handleBookmarkQuery}
+                  />
                 </Tab.Pane>
                 
                 <Tab.Pane eventKey="bulk-export">
