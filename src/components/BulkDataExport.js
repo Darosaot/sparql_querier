@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, ProgressBar } from 'react-bootstrap';
 import { executeQuery } from '../api/sparqlService';
+import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 // Import query definitions from bulkExportQueries.js
 import {
@@ -25,13 +28,14 @@ const BulkDataExport = () => {
   const [selectedGraphs, setSelectedGraphs] = useState(['https://data.europa.eu/a4g/graph/dgGrow']);
   const [selectedDataGroups, setSelectedDataGroups] = useState([]);
   const [selectedFields, setSelectedFields] = useState({});
-  const [email, setEmail] = useState('');
+  const [exportFormat, setExportFormat] = useState('CSV');
   
   // UI states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [exportStatus, setExportStatus] = useState(null);
   const [error, setError] = useState(null);
+  const [exportedData, setExportedData] = useState(null);
 
   // Available graphs
   const availableGraphs = [
@@ -216,11 +220,6 @@ const BulkDataExport = () => {
       return;
     }
 
-    if (!email) {
-      setError('Please provide an email address to receive the export notification.');
-      return;
-    }
-
     if (selectedDataGroups.length === 0) {
       setError('Please select at least one data group to export.');
       return;
@@ -229,21 +228,18 @@ const BulkDataExport = () => {
     setIsSubmitting(true);
     setProgress(0);
     setError(null);
-    setExportStatus('The data export process has been launched. It may take a while. An email will be sent to you with the access to the downloaded data when it is available.');
+    setExportedData(null);
+    setExportStatus('Fetching data... Please wait while we prepare your download.');
 
     try {
-      // In a real implementation, you would send this information to a backend
-      // that would process the export asynchronously and notify the user via email
-      
-      // For demonstration purposes, we'll simulate the process by running
-      // a few queries sequentially
-      
       const totalOperations = selectedDataGroups.length;
       let completedOperations = 0;
       
-      // Simulate executing queries for each selected data group
+      const combinedResults = {};
+      
+      // Execute queries for each selected data group
       for (const groupId of selectedDataGroups) {
-        // In a real app, this would be sent to a backend job queue
+        setExportStatus(`Processing ${dataGroups.find(g => g.id === groupId)?.label || groupId}...`);
         console.log(`Starting export for ${groupId} with date range ${dateRange.startDate} to ${dateRange.endDate}`);
         
         // Get selected fields for this group
@@ -253,22 +249,50 @@ const BulkDataExport = () => {
         
         console.log(`Selected fields for ${groupId}:`, fields);
         
-        // Simulating query execution
+        // Get the query
         const query = getQueryByDataGroup(groupId);
         console.log(`Query for ${groupId}: ${query}`);
         
-        // Simulate a delay as if we're executing the query
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+          // Execute the query
+          const result = await executeQuery(sparqlEndpoint, query);
+          
+          if (result.success && result.data && result.data.length > 0) {
+            // Filter the data to include only selected fields
+            const filteredColumns = result.columns.filter(col => fields.includes(col));
+            const filteredColumnIndices = filteredColumns.map(col => result.columns.indexOf(col));
+            
+            const filteredData = result.data.map(row => 
+              filteredColumnIndices.map(idx => row[idx])
+            );
+            
+            combinedResults[groupId] = {
+              columns: filteredColumns,
+              data: filteredData
+            };
+          } else {
+            console.log(`No results or error for ${groupId}`);
+            combinedResults[groupId] = {
+              columns: [],
+              data: []
+            };
+          }
+        } catch (err) {
+          console.error(`Error executing query for ${groupId}:`, err);
+          combinedResults[groupId] = {
+            columns: [],
+            data: [],
+            error: err.message
+          };
+        }
         
         completedOperations++;
         setProgress(Math.round((completedOperations / totalOperations) * 100));
       }
 
-      // Set final status
-      setExportStatus(`Data export completed. An email will be sent to ${email} with download links.`);
-      
-      // In a real app, this is where you'd trigger the email notification
-      console.log(`Notification would be sent to ${email}`);
+      // Set the completed data
+      setExportedData(combinedResults);
+      setExportStatus('Your data is ready for download!');
       
     } catch (err) {
       setError(`Export failed: ${err.message}`);
@@ -276,6 +300,88 @@ const BulkDataExport = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Handle download button click
+  const handleDownload = () => {
+    if (!exportedData) return;
+    
+    try {
+      // Prepare data for export based on selected format
+      if (exportFormat === 'CSV') {
+        exportToCsv();
+      } else if (exportFormat === 'JSON') {
+        exportToJson();
+      } else if (exportFormat === 'Excel') {
+        exportToExcel();
+      }
+    } catch (err) {
+      setError(`Download failed: ${err.message}`);
+    }
+  };
+
+  // Export to CSV
+  const exportToCsv = () => {
+    // For CSV, we'll create one file per data group
+    Object.entries(exportedData).forEach(([groupId, groupData]) => {
+      if (groupData.columns.length === 0 || groupData.data.length === 0) return;
+      
+      // Convert to CSV using PapaParse
+      const csvData = Papa.unparse({
+        fields: groupData.columns,
+        data: groupData.data
+      });
+      
+      // Create and download blob
+      const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8' });
+      const fileName = `${groupId}_export.csv`;
+      saveAs(blob, fileName);
+    });
+  };
+
+  // Export to JSON
+  const exportToJson = () => {
+    // For JSON, we'll create a single file with all data groups
+    const jsonData = {};
+    
+    Object.entries(exportedData).forEach(([groupId, groupData]) => {
+      if (groupData.columns.length === 0 || groupData.data.length === 0) return;
+      
+      // Convert array data to objects with column names as keys
+      jsonData[groupId] = groupData.data.map(row => {
+        const obj = {};
+        groupData.columns.forEach((col, index) => {
+          obj[col] = row[index];
+        });
+        return obj;
+      });
+    });
+    
+    // Create and download blob
+    const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+    const fileName = 'sparql_export.json';
+    saveAs(blob, fileName);
+  };
+
+  // Export to Excel
+  const exportToExcel = () => {
+    // Create a new workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Add each data group as a worksheet
+    Object.entries(exportedData).forEach(([groupId, groupData]) => {
+      if (groupData.columns.length === 0 || groupData.data.length === 0) return;
+      
+      // Convert data to worksheet format (include headers)
+      const ws_data = [groupData.columns, ...groupData.data];
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, groupId);
+    });
+    
+    // Generate Excel file and trigger download
+    XLSX.writeFile(wb, 'sparql_export.xlsx');
   };
 
   // If the user is not authorized, show a message
@@ -300,8 +406,8 @@ const BulkDataExport = () => {
         <Card.Header as="h5">Bulk Data Export</Card.Header>
         <Card.Body>
           <p className="text-muted">
-            This feature allows authorized users to export large datasets from the PPDS knowledge graph.
-            The data will be processed in the background and you will receive an email with links to download the files.
+            This feature allows you to export large datasets from SPARQL endpoints.
+            Select the data groups and fields you want to include, then click "Start Export" to begin the process.
           </p>
 
           {error && (
@@ -311,10 +417,37 @@ const BulkDataExport = () => {
           )}
 
           {exportStatus && !error && (
-            <Alert variant="info">
+            <Alert variant={exportedData ? "success" : "info"}>
               {exportStatus}
               {isSubmitting && (
                 <ProgressBar animated now={progress} className="mt-2" />
+              )}
+              
+              {exportedData && (
+                <div className="mt-3">
+                  <Form.Group as={Row} className="mb-3">
+                    <Form.Label column sm="3">Export Format:</Form.Label>
+                    <Col sm="6">
+                      <Form.Select
+                        value={exportFormat}
+                        onChange={(e) => setExportFormat(e.target.value)}
+                      >
+                        <option value="CSV">CSV</option>
+                        <option value="JSON">JSON</option>
+                        <option value="Excel">Excel</option>
+                      </Form.Select>
+                    </Col>
+                    <Col sm="3">
+                      <Button 
+                        variant="success" 
+                        onClick={handleDownload}
+                        className="w-100"
+                      >
+                        Download
+                      </Button>
+                    </Col>
+                  </Form.Group>
+                </div>
               )}
             </Alert>
           )}
@@ -488,32 +621,15 @@ const BulkDataExport = () => {
               </Form.Group>
             )}
 
-            {/* Email for notification */}
-            <Form.Group as={Row} className="mb-3">
-              <Form.Label column sm="3">Notification Email</Form.Label>
-              <Col sm="9">
-                <Form.Control
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <Form.Text className="text-muted">
-                  You will receive an email with download links when the export is complete.
-                </Form.Text>
-              </Col>
-            </Form.Group>
-
             {/* Submit Button */}
             <div className="d-grid gap-2">
               <Button
                 variant="primary"
                 size="lg"
                 onClick={startDataExport}
-                disabled={isSubmitting || selectedDataGroups.length === 0 || !email || !sparqlEndpoint}
+                disabled={isSubmitting || selectedDataGroups.length === 0 || !sparqlEndpoint}
               >
-                {isSubmitting ? 'Processing...' : 'Start Data Export'}
+                {isSubmitting ? 'Processing...' : 'Start Export'}
               </Button>
             </div>
           </Form>
