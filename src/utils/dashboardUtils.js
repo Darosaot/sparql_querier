@@ -152,7 +152,7 @@ export const createDashboard = (name, description = '') => {
   }
 
   const now = new Date().toISOString();
-  const dashboardId = `dashboard-${uuidv4()}`;
+  const dashboardId = `dashboard-${uuidv4()}`;  // This line generates the ID
   
   const dashboard = {
     id: dashboardId,
