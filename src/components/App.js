@@ -12,7 +12,6 @@ import Visualization from './Visualization';
 import RegressionAnalysis from './RegressionAnalysis';
 import DataOperations from './DataOperations';
 import ExportOptions from './ExportOptions';
-import BulkDataExport from './BulkDataExport';
 import QueryHistory from './QueryHistory';
 import DashboardManager from './DashboardManager';
 import { executeQuery, isValidSparql } from '../api/sparqlService';
@@ -162,9 +161,6 @@ function App() {
                 <Nav.Item>
                   <Nav.Link eventKey="dashboards">Dashboards</Nav.Link>
                 </Nav.Item>
-                <Nav.Item>
-                  <Nav.Link eventKey="bulk-export">Bulk Data Export</Nav.Link>
-                </Nav.Item>
               </Nav>
             </Col>
           </Row>
@@ -234,10 +230,6 @@ function App() {
                 
                 <Tab.Pane eventKey="dashboards">
                   <DashboardManager />
-                </Tab.Pane>
-                
-                <Tab.Pane eventKey="bulk-export">
-                  <BulkDataExport />
                 </Tab.Pane>
               </Tab.Content>
             </Col>
