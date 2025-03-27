@@ -12,27 +12,8 @@ An application for querying SPARQL endpoints and visualizing the results. This a
 - **Export Options**: Export your results in CSV, JSON, or Excel formats
 - **Query History**: Save, search, and reuse past queries with bookmark functionality
 - **Custom Dashboards**: Create, save, and share dashboards with multiple visualization panels
-- **Bulk Data Export**: Export large datasets with customizable field selection
 
-## Installation
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/sparql-analytics-react.git
-   cd sparql-analytics-react
-   ```
-
-2. Install dependencies:
-   ```
-   npm install
-   ```
-
-3. Start the development server:
-   ```
-   npm start
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000) to view the app in your browser.
 
 ## Usage
 
@@ -59,14 +40,6 @@ An application for querying SPARQL endpoints and visualizing the results. This a
 - SPARQL HTTP Client for query execution
 - Local storage for saving user preferences and dashboards
 
-## Development
-
-### Available Scripts
-
-- `npm start` - Runs the app in development mode
-- `npm test` - Runs the test suite
-- `npm run build` - Builds the app for production
-- `npm run eject` - Ejects from Create React App
 
 ## Contributing
 
@@ -78,4 +51,4 @@ An application for querying SPARQL endpoints and visualizing the results. This a
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the Apache-2.0 License - see the LICENSE file for details.
