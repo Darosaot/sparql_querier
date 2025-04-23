@@ -113,6 +113,8 @@ const formatSparqlQuery = (query) => {
   return formattedLines.join('\n');
 };
 
+export { formatSparqlQuery };
+
 // List of common SPARQL prefixes with tooltips
 const commonPrefixes = [
   { prefix: 'rdf', uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', description: 'RDF basic vocabulary' },

@@ -272,6 +272,3 @@ testApp(); // Run tests for App component
 
 export default App;
 
-
-testSparqlInput();
-testApp();
