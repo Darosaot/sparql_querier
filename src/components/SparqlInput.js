@@ -113,7 +113,7 @@ const formatSparqlQuery = (query) => {
   return formattedLines.join('\n');
 };
 
-export { formatSparqlQuery };
+export { formatSparqlQuery, validateSparqlQuery };
 
 // List of common SPARQL prefixes with tooltips
 const commonPrefixes = [
