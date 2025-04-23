@@ -1,13 +1,15 @@
 // src/components/App.js
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Nav, Tab } from 'react-bootstrap';
+import SuccessDisplay from './SuccessDisplay';
+import SparqlInput from './SparqlInput';
+import ErrorDisplay from './ErrorDisplay';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css'; // Add Bootstrap Icons
 import './App.css';
 import Header from './Header';
 // Import the enhanced editor
 import EnhancedSparqlEditor from './EnhancedSparqlEditor';
-import ResultsTable from './ResultsTable';
 import Visualization from './Visualization';
 import RegressionAnalysis from './RegressionAnalysis';
 import DataOperations from './DataOperations';
@@ -15,12 +17,14 @@ import ExportOptions from './ExportOptions';
 import QueryHistory from './QueryHistory';
 import DashboardManager from './DashboardManager';
 import { executeQuery, isValidSparql } from '../api/sparqlService';
+import ResultsTable from './ResultsTable';
 
 function App() {
   // State for query and results
   const [sparqlEndpoint, setSparqlEndpoint] = useState('');
   const [query, setQuery] = useState('');
   const [queryResults, setQueryResults] = useState(null);
+  const [queryName, setQueryName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('sparql-query');
@@ -54,7 +58,7 @@ function App() {
       return;
     }
     
-    if (!isValidSparql(query)) {
+    if (query && !isValidSparql(query)) {
       setError('The SPARQL query seems to be invalid. Please check the syntax.');
       return;
     }
@@ -68,16 +72,16 @@ function App() {
       if (result.success) {
         setQueryResults(result);
         
+        const name = queryName;
+
         // Save the query to history
-        const timestamp = new Date().toISOString();
-        const queryName = getQueryName(query);
+        const timestamp = new Date().getTime();
         
         // Create a new history entry
         const historyEntry = {
           id: timestamp, // Use timestamp as ID
-          timestamp,
           name: queryName,
-          query,
+          query: query,
           endpoint: sparqlEndpoint,
           resultCount: result.data.length,
           executionTime: result.executionTime,
@@ -102,9 +106,14 @@ function App() {
   
   // Helper function to extract a name from the query
   const getQueryName = (queryText) => {
+      if(queryName){
+        const value = queryName;
+        setQueryName('');
+        return value;
+      }
     // Look for SELECT or CONSTRUCT keyword
     const selectMatch = queryText.match(/SELECT\s+.+?\s+WHERE/i);
-    if (selectMatch) {
+      if (selectMatch) {
       // Extract and return up to 30 characters after SELECT
       const extractedText = selectMatch[0]
         .replace(/SELECT\s+/i, '')
@@ -118,6 +127,7 @@ function App() {
     // If no pattern is found, return a generic name with timestamp
     return `Query ${new Date().toLocaleTimeString()}`;
   };
+
   
   // Handle loading a query from history
   const handleLoadQuery = (historyItem) => {
@@ -169,27 +179,28 @@ function App() {
             <Col>
               <Tab.Content>
                 <Tab.Pane eventKey="sparql-query">
-                  {/* Use our enhanced SPARQL editor */}
-                  <EnhancedSparqlEditor 
+                  {/* Use our SparqlInput component */}
+                  <SparqlInput
                     sparqlEndpoint={sparqlEndpoint}
                     setSparqlEndpoint={setSparqlEndpoint}
                     query={query}
                     setQuery={setQuery}
-                    onExecute={handleExecuteQuery}
                     isLoading={isLoading}
+                    onExecute={handleExecuteQuery}
+
                   />
+
                   
-                  {error && (
-                    <div className="alert alert-danger mt-3" role="alert">
-                      {error}
-                    </div>
-                  )}
+                  {error &&
+                    <ErrorDisplay error={error} />
+                  }
                   
                   {queryResults && queryResults.data.length > 0 && (
                     <>
-                      <div className="alert alert-success mt-4" role="alert">
-                        <strong>Success!</strong> Query executed successfully, retrieved {queryResults.data.length} results in {queryResults.executionTime.toFixed(2)} seconds.
-                      </div>
+                    <SuccessDisplay 
+                      resultCount={queryResults.data.length} 
+                      columnCount={queryResults.columns.length} 
+                      executionTime={queryResults.executionTime}/>
                       
                       <div className="mt-4">
                         <h3 className="mb-3">Results</h3>
