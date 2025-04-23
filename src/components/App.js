@@ -1,7 +1,6 @@
 // src/components/App.js
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Nav, Tab } from 'react-bootstrap';
-import SuccessDisplay from './SuccessDisplay';
 import SparqlInput from './SparqlInput';
 import ErrorDisplay from './ErrorDisplay';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -16,6 +15,7 @@ import QueryHistory from './QueryHistory';
 import DashboardManager from './DashboardManager';
 import { executeQuery, isValidSparql } from '../api/sparqlService';
 import ResultsTable from './ResultsTable';
+import SuccessDisplay from './SuccessDisplay';
 
 function App() {
   // State for query and results
@@ -106,7 +106,6 @@ function App() {
   const getQueryName = (queryText) => {
       if(queryName){
         const value = queryName;
-        setQueryName('');
         return value;
       }
     // Look for SELECT or CONSTRUCT keyword
