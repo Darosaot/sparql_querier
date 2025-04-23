@@ -1,10 +1,9 @@
 import { executeQuery } from '../api/sparqlService';
 import { assert } from '../utils/testUtils';
 
-const testApp = async () => {
+const testApp = async function() {
   console.log('Starting App component tests...');
 
-  // 1. Query Execution
   console.log('  Starting Query Execution tests...');
 
   // 1.1 Valid Endpoint and Query
@@ -54,8 +53,8 @@ const testApp = async () => {
   // 1.5 Empty Endpoint
   try {
     const result = await executeQuery("", anyQuery);
-    assert(!result.success, 'Empty Endpoint query should fail');
-    console.log('    ✓ Empty Endpoint test passed');
+    assert(!result.success, 'Empty Endpoint query should fail');    
+    console.log('    ✓ Empty Endpoint test passed');    
   } catch (error) {
     console.error('    ✕ Empty Endpoint test failed', error);
   }
@@ -64,7 +63,6 @@ const testApp = async () => {
 
 
   // 2. Query history
-
   console.log('  Starting query history tests...');
 
     // Add Query :
@@ -145,11 +143,10 @@ const testApp = async () => {
         assert(loadedQuery === 'SELECT * WHERE {?s ?p ?o}', 'Loading a query should return the query');
         console.log('    ✓ Load query test passed');
     };
-    loadQueryTest();
+    loadQueryTest();    
 
     console.log('  Ending query history tests.');
 
   console.log('Ending App component tests.');
 };
-
 testApp();

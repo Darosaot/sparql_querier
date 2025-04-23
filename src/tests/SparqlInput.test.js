@@ -111,7 +111,9 @@ const formatSparqlQuery = (query) => {
     return formattedLines.join('\n');
   };
 
-//List of common SPARQL prefixes with tooltips
+
+
+// List of common SPARQL prefixes with tooltips
 const commonPrefixes = [
     { prefix: 'rdf', uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', description: 'RDF basic vocabulary' },
     { prefix: 'rdfs', uri: 'http://www.w3.org/2000/01/rdf-schema#', description: 'RDF Schema vocabulary' },
@@ -132,109 +134,114 @@ const commonPrefixes = [
     { url: 'http://linkedgeodata.org/sparql', description: 'LinkedGeoData - Spatial data from OpenStreetMap' }
   ];
 
+// List of query templates
 const queryTemplates = {
     'All triples': 'SELECT ?s ?p ?o WHERE { ?s ?p ?o }',
     'All classes': 'SELECT DISTINCT ?class WHERE { ?s rdf:type ?class }',
   };
 
-// 1. SPARQL Query Validation
-console.log('Running SPARQL Query Validation tests...');
+// Test runner function
+const testSparqlInput = () => {
+  console.log('Starting SparqlInput tests...');
 
-// Valid Queries
-let validationResult = validateSparqlQuery('SELECT * WHERE { ?s ?p ?o }');
-assert(validationResult.valid === true, 'SELECT query should be valid');
+  // 1. SPARQL Query Validation
+  console.log('Running SPARQL Query Validation tests...');
 
-validationResult = validateSparqlQuery('CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }');
-assert(validationResult.valid === true, 'CONSTRUCT query should be valid');
+  // Valid Queries
+  let validationResult = validateSparqlQuery('SELECT * WHERE { ?s ?p ?o }');
+  assert(validationResult.valid === true, 'SELECT query should be valid');
 
-validationResult = validateSparqlQuery('ASK WHERE { ?s ?p ?o }');
-assert(validationResult.valid === true, 'ASK query should be valid');
+  validationResult = validateSparqlQuery('CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }');
+  assert(validationResult.valid === true, 'CONSTRUCT query should be valid');
 
-validationResult = validateSparqlQuery('DESCRIBE <http://example.com>');
-assert(validationResult.valid === true, 'DESCRIBE query should be valid');
+  validationResult = validateSparqlQuery('ASK WHERE { ?s ?p ?o }');
+  assert(validationResult.valid === true, 'ASK query should be valid');
 
-// Invalid Queries
-validationResult = validateSparqlQuery('SELECT * { ?s ?p ?o }');
-assert(validationResult.valid === false, 'SELECT query missing WHERE should be invalid');
+  validationResult = validateSparqlQuery('DESCRIBE <http://example.com>');
+  assert(validationResult.valid === true, 'DESCRIBE query should be valid');
 
-validationResult = validateSparqlQuery('CONSTRUCT { ?s ?p ?o } { ?s ?p ?o }');
-assert(validationResult.valid === false, 'CONSTRUCT query missing WHERE should be invalid');
+  // Invalid Queries
+  validationResult = validateSparqlQuery('SELECT * { ?s ?p ?o }');
+  assert(validationResult.valid === false, 'SELECT query missing WHERE should be invalid');
 
-validationResult = validateSparqlQuery('ASK { ?s ?p ?o }');
-assert(validationResult.valid === false, 'ASK query missing WHERE should be invalid');
+  validationResult = validateSparqlQuery('CONSTRUCT { ?s ?p ?o } { ?s ?p ?o }');
+  assert(validationResult.valid === false, 'CONSTRUCT query missing WHERE should be invalid');
 
-validationResult = validateSparqlQuery('SELECT { ?s ?p ?o WHERE { ?s ?p ?o }');
-assert(validationResult.valid === false, 'Unbalanced braces should be invalid');
+  validationResult = validateSparqlQuery('ASK { ?s ?p ?o }');
+  assert(validationResult.valid === false, 'ASK query missing WHERE should be invalid');
 
-validationResult = validateSparqlQuery('SELECT * WHERE { ?s ?p "o }');
-assert(validationResult.valid === false, 'Unclosed double quotes should be invalid');
+  validationResult = validateSparqlQuery('SELECT { ?s ?p ?o WHERE { ?s ?p ?o }');
+  assert(validationResult.valid === false, 'Unbalanced braces should be invalid');
 
-validationResult = validateSparqlQuery("SELECT * WHERE { ?s ?p 'o }");
-assert(validationResult.valid === false, 'Unclosed single quotes should be invalid');
+  validationResult = validateSparqlQuery('SELECT * WHERE { ?s ?p "o }');
+  assert(validationResult.valid === false, 'Unclosed double quotes should be invalid');
 
-validationResult = validateSparqlQuery('BLA BLA');
-assert(validationResult.valid === false, 'Invalid query should be invalid');
+  validationResult = validateSparqlQuery("SELECT * WHERE { ?s ?p 'o }");
+  assert(validationResult.valid === false, 'Unclosed single quotes should be invalid');
 
-validationResult = validateSparqlQuery('');
-assert(validationResult.valid === false, 'Empty query should be invalid');
+  validationResult = validateSparqlQuery('BLA BLA');
+  assert(validationResult.valid === false, 'Invalid query should be invalid');
 
-// Warnings
-validationResult = validateSparqlQuery('SELECT * WHERE { ?s ?p ?o }');
-assert(validationResult.warnings.length > 0, 'Query with no limit should have a warning');
+  validationResult = validateSparqlQuery('');
+  assert(validationResult.valid === false, 'Empty query should be invalid');
 
-console.log('SPARQL Query Validation tests completed.');
+  // Warnings
+  validationResult = validateSparqlQuery('SELECT * WHERE { ?s ?p ?o }');
+  assert(validationResult.warnings.length > 0, 'Query with no limit should have a warning');
 
-// 2. SPARQL Query Formatting
-console.log('Running SPARQL Query Formatting tests...');
+  console.log('SPARQL Query Validation tests completed.');
 
-// Basic Formatting
-let formattedQuery = formatSparqlQuery('SELECT*WHERE{?s?p?o}');
-assert(formattedQuery === 'SELECT\n  *\nWHERE\n  {\n    ?s\n    ?p\n    ?o\n  }', 'Basic formatting failed');
+  // 2. SPARQL Query Formatting
+  console.log('Running SPARQL Query Formatting tests...');
 
-// Keyword Handling
-formattedQuery = formatSparqlQuery('PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>SELECT * WHERE { ?s ?p ?o }');
-assert(formattedQuery.includes('PREFIX'), 'Keyword PREFIX handling failed');
-assert(formattedQuery.includes('SELECT'), 'Keyword SELECT handling failed');
-assert(formattedQuery.includes('WHERE'), 'Keyword WHERE handling failed');
+  // Basic Formatting
+  let formattedQuery = formatSparqlQuery('SELECT*WHERE{?s?p?o}');
+  assert(formattedQuery === 'SELECT\n  *\nWHERE\n  {\n    ?s\n    ?p\n    ?o\n  }', 'Basic formatting failed');
 
-// Brace Handling
-formattedQuery = formatSparqlQuery('SELECT * WHERE { { ?s ?p ?o }}');
-assert(formattedQuery.includes('{'), 'Brace handling failed');
-assert(formattedQuery.includes('}'), 'Brace handling failed');
+  // Keyword Handling
+  formattedQuery = formatSparqlQuery('PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>SELECT * WHERE { ?s ?p ?o }');
+  assert(formattedQuery.includes('PREFIX'), 'Keyword PREFIX handling failed');
+  assert(formattedQuery.includes('SELECT'), 'Keyword SELECT handling failed');
+  assert(formattedQuery.includes('WHERE'), 'Keyword WHERE handling failed');
 
-console.log('SPARQL Query Formatting tests completed.');
-// 3. Prefix Handling
-console.log('Running Prefix Handling tests...');
+  // Brace Handling
+  formattedQuery = formatSparqlQuery('SELECT * WHERE { { ?s ?p ?o }}');
+  assert(formattedQuery.includes('{'), 'Brace handling failed');
+  assert(formattedQuery.includes('}'), 'Brace handling failed');
 
-// Adding Prefixes
+  console.log('SPARQL Query Formatting tests completed.');
+  // 3. Prefix Handling
+  console.log('Running Prefix Handling tests...');
+
+  // Adding Prefixes
 const addPrefix = (prefix, uri, query) => {
-    if (!query.includes(`PREFIX ${prefix}:`)) {
-      const prefixDeclaration = `PREFIX ${prefix}: <${uri}>\n`;
-      
-      // Add at the beginning or after other prefixes
-      const lines = query.split('\n');
-      let lastPrefixIndex = -1;
-      
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i].trim().toUpperCase().startsWith('PREFIX')) {
-          lastPrefixIndex = i;
-        }
+  if (!query.includes(`PREFIX ${prefix}:`)) {
+    const prefixDeclaration = `PREFIX ${prefix}: <${uri}>\n`;
+    
+    // Add at the beginning or after other prefixes
+    const lines = query.split('\n');
+    let lastPrefixIndex = -1;
+    
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].trim().toUpperCase().startsWith('PREFIX')) {
+        lastPrefixIndex = i;
       }
-      
-      if (lastPrefixIndex >= 0) {
-        // Insert after the last prefix
-        lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
-      } else {
-        // Insert at the beginning
-        lines.unshift(prefixDeclaration);
-      }
-      
-      const updatedQuery = lines.join('\n');
-      return updatedQuery;
     }
-    return query;
-  };
-  
+    
+    if (lastPrefixIndex >= 0) {
+      // Insert after the last prefix
+      lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
+    } else {
+      // Insert at the beginning
+      lines.unshift(prefixDeclaration);
+    }
+    
+    const updatedQuery = lines.join('\n');
+    return updatedQuery;
+  }
+  return query;
+};
+
 let newQuery = addPrefix('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'SELECT * WHERE { ?s ?p ?o }');
 assert(newQuery.startsWith('PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>'), 'Adding prefix rdf failed');
 
@@ -254,32 +261,36 @@ console.log('Running Template Handling tests...');
 let templateQuery = queryTemplates['All triples'];
 assert(templateQuery === 'SELECT ?s ?p ?o WHERE { ?s ?p ?o }', "Selecting 'All triples' template failed");
 
-templateQuery = queryTemplates['All classes'];
-assert(templateQuery === 'SELECT DISTINCT ?class WHERE { ?s rdf:type ?class }', "Selecting 'All classes' template failed");
+  templateQuery = queryTemplates['All classes'];
+  assert(templateQuery === 'SELECT DISTINCT ?class WHERE { ?s rdf:type ?class }', "Selecting 'All classes' template failed");
 
-//Empty query
-const addBasicStructure = (query) => {
-    if (!query.trim()) {
-        const basicQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n\nSELECT ?subject ?predicate ?object\nWHERE {\n  ?subject ?predicate ?object .\n  \n  # Add your conditions here\n  \n} LIMIT 100`;
-        return basicQuery;
-    }
-    return query;
-}
+  //Empty query
+  const addBasicStructure = (query) => {
+      if (!query.trim()) {
+          const basicQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n\nSELECT ?subject ?predicate ?object\nWHERE {\n  ?subject ?predicate ?object .\n  \n  # Add your conditions here\n  \n} LIMIT 100`;
+          return basicQuery;
+      }
+      return query;
+  }
 
-let basicQuery = addBasicStructure("");
-assert(basicQuery.includes("SELECT ?subject ?predicate ?object"), "Adding basic structure to an empty query failed.");
+  let basicQuery = addBasicStructure("");
+  assert(basicQuery.includes("SELECT ?subject ?predicate ?object"), "Adding basic structure to an empty query failed.");
 
-//No limit
-const addLimit = (query) => {
-    if (!query.toUpperCase().includes('LIMIT')) {
-      let updatedQuery = query.trim();
-      updatedQuery += '\nLIMIT 100';
-      return updatedQuery;
-    }
-    return query;
-  };
+  //No limit
+  const addLimit = (query) => {
+      if (!query.toUpperCase().includes('LIMIT')) {
+        let updatedQuery = query.trim();
+        updatedQuery += '\nLIMIT 100';
+        return updatedQuery;
+      }
+      return query;
+    };
 
-let limitQuery = addLimit("SELECT * WHERE {?s ?p ?o}");
-assert(limitQuery.toUpperCase().includes('LIMIT 100'), "Adding limit failed");
+  let limitQuery = addLimit("SELECT * WHERE {?s ?p ?o}");
+  assert(limitQuery.toUpperCase().includes('LIMIT 100'), "Adding limit failed");
 
-console.log('Template Handling tests completed.');
+  console.log('Template Handling tests completed.');
+  console.log('SparqlInput tests finished.');
+};
+
+testSparqlInput();

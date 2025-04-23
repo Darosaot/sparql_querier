@@ -1,5 +1,6 @@
 // src/components/App.js
 import React, { useState, useEffect } from 'react';
+
 import { Container, Row, Col, Nav, Tab } from 'react-bootstrap';
 import SparqlInput from './SparqlInput';
 import ErrorDisplay from './ErrorDisplay';
@@ -16,7 +17,10 @@ import DashboardManager from './DashboardManager';
 import { executeQuery, isValidSparql } from '../api/sparqlService';
 import ResultsTable from './ResultsTable';
 import SuccessDisplay from './SuccessDisplay';
+import { testSparqlInput } from '../tests/SparqlInput.test'; // Import testSparqlInput function
+import { testApp } from '../tests/App.test'; // Import testApp function
 
+// Main App component
 function App() {
   // State for query and results
   const [sparqlEndpoint, setSparqlEndpoint] = useState('');
@@ -24,6 +28,7 @@ function App() {
   const [queryResults, setQueryResults] = useState(null);
   const [queryName, setQueryName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('sparql-query');
   
@@ -260,4 +265,13 @@ function App() {
   );
 }
 
+// Call test functions to run tests
+
+testSparqlInput(); // Run tests for SparqlInput component
+testApp(); // Run tests for App component
+
 export default App;
+
+
+testSparqlInput();
+testApp();
