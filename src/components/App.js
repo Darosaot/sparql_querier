@@ -8,8 +8,6 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css'; // Add Bootstrap Icons
 import './App.css';
 import Header from './Header';
-// Import the enhanced editor
-import EnhancedSparqlEditor from './EnhancedSparqlEditor';
 import Visualization from './Visualization';
 import RegressionAnalysis from './RegressionAnalysis';
 import DataOperations from './DataOperations';
