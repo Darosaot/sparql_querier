@@ -1,7 +1,7 @@
 import { executeQuery } from '../api/sparqlService';
 import { assert } from '../utils/testUtils';
 
-const testApp = async function() {
+export const testApp = async function() {
   console.log('Starting App component tests...');
 
   console.log('  Starting Query Execution tests...');

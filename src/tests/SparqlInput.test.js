@@ -112,7 +112,6 @@ const formatSparqlQuery = (query) => {
   };
 
 
-
 // List of common SPARQL prefixes with tooltips
 const commonPrefixes = [
     { prefix: 'rdf', uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', description: 'RDF basic vocabulary' },
@@ -141,7 +140,7 @@ const queryTemplates = {
   };
 
 // Test runner function
-const testSparqlInput = () => {
+export function testSparqlInput() {
   console.log('Starting SparqlInput tests...');
 
   // 1. SPARQL Query Validation
@@ -292,5 +291,4 @@ assert(templateQuery === 'SELECT ?s ?p ?o WHERE { ?s ?p ?o }', "Selecting 'All t
   console.log('Template Handling tests completed.');
   console.log('SparqlInput tests finished.');
 };
-
 testSparqlInput();
