@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Table, Button, Badge, Form, Row, Col, InputGroup } from 'react-bootstrap';
+import { Card, Table, Button, Form, Row, Col, InputGroup } from 'react-bootstrap';
 
 /**
  * QueryHistory component to track and manage previous SPARQL queries

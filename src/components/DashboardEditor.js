@@ -1,5 +1,6 @@
 // src/components/DashboardEditor.js - Simplified version
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { Card, Button, Row, Col, Form, Alert, Modal, OverlayTrigger, Tooltip, Dropdown } from 'react-bootstrap';
 import { 
   getDashboardById, 
@@ -751,8 +752,8 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
         <Modal.Body>
           <p>
             {shareMode === 'view' && 'Anyone with this link can view the dashboard:'}
-            {shareMode === 'edit' && 'Anyone with this link can view and edit the dashboard:'}
-            {shareMode === 'embed' && 'Use this code to embed the dashboard in your website:'}
+            {shareMode === 'edit' && 'Anyone with this link can view and edit the dashboard:'} 
+            {shareMode === 'embed' && 'Use this code to embed the dashboard in your website:'} 
           </p>
           
           {shareMode === 'embed' ? (
@@ -760,7 +761,7 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
               as="textarea"
               rows={3}
               value={`<iframe src="${shareUrl}" width="100%" height="600" frameborder="0"></iframe>`}
-              readOnly
+              readOnly 
               onClick={(e) => e.target.select()}
             />
           ) : (
@@ -779,7 +780,7 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
                 navigator.clipboard.writeText(
                   shareMode === 'embed' 
                     ? `<iframe src="${shareUrl}" width="100%" height="600" frameborder="0"></iframe>`
-                    : shareUrl
+                    : shareUrl 
                 );
                 alert('Copied to clipboard!');
               }}
@@ -839,3 +840,8 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
 };
 
 export default DashboardEditor;
+
+DashboardEditor.propTypes = {
+  dashboardId: PropTypes.string.isRequired,
+  onBack: PropTypes.func.isRequired,
+};

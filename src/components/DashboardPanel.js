@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Button, Spinner, Table, OverlayTrigger, Tooltip, Dropdown } from 'react-bootstrap';
+import PropTypes from 'prop-types';
 import Plot from 'react-plotly.js';
 import { executeQuery } from '../api/sparqlService';
 import * as ss from 'simple-statistics';
@@ -339,8 +340,8 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
     const sortedEntries = Object.entries(result).sort();
     
     return {
-      labels: sortedEntries.map(([label]) => label),
-      values: sortedEntries.map(([_, value]) => value)
+      labels: sortedEntries.map(([label]) => label), // Remove the unused _ variable
+      values: sortedEntries.map(([, value]) => value) // Use destructuring to get the value directly
     };
   };
   
@@ -768,3 +769,9 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
 };
 
 export default DashboardPanel;
+
+DashboardPanel.propTypes = {
+  panel: PropTypes.object.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  isEditMode: PropTypes.bool.isRequired,
+};

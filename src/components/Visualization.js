@@ -5,12 +5,10 @@ import Plot from 'react-plotly.js';
 import { processData } from '../utils/dataUtils';
 import _ from 'lodash';
 
-const Visualization = ({ data, columns }) => {
+const Visualization = ({ data, columns}) => {
   const [vizType, setVizType] = useState('Table');
   const [xAxis, setXAxis] = useState(columns[0] || '');
   const [yAxis, setYAxis] = useState(columns.length > 1 ? columns[1] : columns[0] || '');
-  const [zAxis, setZAxis] = useState(columns.length > 2 ? columns[2] : '');
-  const [sizeMetric, setSizeMetric] = useState('');
   const [colorMetric, setColorMetric] = useState('');
   const [groupByField, setGroupByField] = useState('');
   const [customColors, setCustomColors] = useState([]);
@@ -18,6 +16,10 @@ const Visualization = ({ data, columns }) => {
   const [showLegend, setShowLegend] = useState(true);
   const [activeTab, setActiveTab] = useState('basic');
   const [chartTitle, setChartTitle] = useState('');
+  const [zAxis, setZAxis] = useState(columns.length > 2 ? columns[2] : '');
+  const [sizeMetric, setSizeMetric] = useState('');
+  const [chartWidth, setChartWidth] = useState('100%');
+  const [chartHeight, setChartHeight] = useState(500);
   const [chartSubtitle, setChartSubtitle] = useState('');
   
   // Chart configuration
@@ -48,8 +50,7 @@ const Visualization = ({ data, columns }) => {
   // New state for metrics and grouping
   const [groupByOperation, setGroupByOperation] = useState('sum');
   const [excludeNA, setExcludeNA] = useState(true);
-  const [chartWidth, setChartWidth] = useState('100%');
-  const [chartHeight, setChartHeight] = useState(500);
+
   
   // State for network graph
   const [nodeField, setNodeField] = useState('');
@@ -129,8 +130,7 @@ const Visualization = ({ data, columns }) => {
   ];
 
   // Process data for visualization
-  const processedData = processData(data, columns);
-  
+
   // Helper function to get values from a column
   const extractColumnValues = (columnName, excludeNAValues = true) => {
     if (!columnName) {
@@ -1849,7 +1849,6 @@ const Visualization = ({ data, columns }) => {
       plotRef.current.toImage({
         format: format,
         height: 800,
-        width: 1200,
         scale: 2
       }).then(dataUrl => {
         const link = document.createElement('a');

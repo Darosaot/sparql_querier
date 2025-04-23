@@ -18,8 +18,6 @@ import { executeQuery, isValidSparql } from '../api/sparqlService';
 import ResultsTable from './ResultsTable';
 import SuccessDisplay from './SuccessDisplay';
 import { testSparqlInput } from '../tests/SparqlInput.test'; // Import testSparqlInput function
-import { testApp } from '../tests/App.test'; // Import testApp function\
-import SharedDashboard from './SharedDashboard';
 
 
 // Main App component
@@ -28,7 +26,6 @@ function App() {
   const [sparqlEndpoint, setSparqlEndpoint] = useState('');
   const [query, setQuery] = useState('');
   const [queryResults, setQueryResults] = useState(null);
-  const [queryName, setQueryName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const [error, setError] = useState(null);
@@ -77,8 +74,6 @@ function App() {
       if (result.success) {
         setQueryResults(result);
         
-        const name = queryName;
-
         // Save the query to history
         const timestamp = new Date().getTime();
         
@@ -109,11 +104,8 @@ function App() {
     }
   };
   
-  // Helper function to extract a name from the query
-  const getQueryName = (queryText) => {
-      if(queryName){
-        const value = queryName;
-        return value;
+    const getQueryName = (queryText, queryName) => {
+        if(queryName){
       }
     // Look for SELECT or CONSTRUCT keyword
     const selectMatch = queryText.match(/SELECT\s+.+?\s+WHERE/i);
@@ -259,12 +251,10 @@ function App() {
       <Route path="/shared/:shareToken" element={<SharedDashboard />} />
     </Routes>
   )
-}
+};
 
-// Call test functions to run tests
 
-testSparqlInput(); // Run tests for SparqlInput component
-testApp(); // Run tests for App component
+export default App;
 
 export default App;
 

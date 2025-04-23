@@ -67,7 +67,7 @@ export const testApp = async function() {
 
     // Add Query :
     const addQueryTest = () => {
-      let queryHistory = [];
+      let queryHistory;
       const historyEntry = {
         id: 'test',
         name: 'Test Query',
@@ -76,6 +76,7 @@ export const testApp = async function() {
         resultCount: 0,
         executionTime: 0,
         bookmarked: false,
+      };      
       };
       queryHistory = [historyEntry, ...queryHistory];
       assert(queryHistory.length === 1, 'Adding a query should increase history length');
@@ -85,7 +86,7 @@ export const testApp = async function() {
 
       // Delete Query:
     const deleteQueryTest = () => {
-        let queryHistory = [];
+        let queryHistory;
         const historyEntry = {
         id: 'test',
         name: 'Test Query',
@@ -104,7 +105,7 @@ export const testApp = async function() {
 
     // Bookmark:
     const bookmarkQueryTest = () => {
-        let queryHistory = [];
+        let queryHistory;
         const historyEntry = {
         id: 'test',
         name: 'Test Query',
@@ -127,7 +128,7 @@ export const testApp = async function() {
 
     // Load query
     const loadQueryTest = () => {
-        let queryHistory = [];
+        let queryHistory;
         const historyEntry = {
         id: 'test',
         name: 'Test Query',

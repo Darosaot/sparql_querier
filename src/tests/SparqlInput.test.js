@@ -103,5 +103,5 @@ console.log('Prefix Handling tests completed.');
 
     console.log('Template Handling tests completed.');
     console.log('SparqlInput tests finished.');
-};
+}
 testSparqlInput();

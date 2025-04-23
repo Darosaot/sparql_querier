@@ -1,6 +1,7 @@
 // src/components/DashboardList.js - Fixed version
 import React, { useState } from 'react';
 import { Card, Button, Table, Modal, Form, InputGroup, Alert, Badge } from 'react-bootstrap';
+import PropTypes from 'prop-types';
 import { createDashboard, deleteDashboard, exportDashboard, importDashboard } from '../utils/dashboardUtils';
 
 const DashboardList = ({ dashboards = [], onSelectDashboard, onDashboardsChanged }) => {
@@ -389,3 +390,9 @@ const DashboardList = ({ dashboards = [], onSelectDashboard, onDashboardsChanged
 };
 
 export default DashboardList;
+
+DashboardList.propTypes = {
+  dashboards: PropTypes.arrayOf(PropTypes.object).isRequired,
+  onSelectDashboard: PropTypes.func.isRequired,
+  onDashboardsChanged: PropTypes.func.isRequired,
+};
