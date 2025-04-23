@@ -113,7 +113,7 @@ const formatSparqlQuery = (query) => {
   return formattedLines.join('\n');
 };
 
-export { formatSparqlQuery, validateSparqlQuery };
+
 
 // List of common SPARQL prefixes with tooltips
 const commonPrefixes = [
@@ -207,7 +207,7 @@ const SparqlInput = ({
   };
 
   // Add common prefix to query
-  const addPrefix = (prefix, uri) => {
+  const addPrefix = (prefix, uri, queryValue) => {
     // Check if the prefix is already in the query
     if (!query.includes(`PREFIX ${prefix}:`)) {
       const prefixDeclaration = `PREFIX ${prefix}: <${uri}>\n`;
@@ -231,12 +231,12 @@ const SparqlInput = ({
       }
       
       const updatedQuery = lines.join('\n');
-      setQuery(updatedQuery);
+      setQuery(updatedQuery, queryValue);
       setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
     }
   };
 
-  // Format the query
+   // Format the query
   const handleFormatQuery = () => {
     const formatted = formatSparqlQuery(query);
     setQuery(formatted);
@@ -254,7 +254,7 @@ const SparqlInput = ({
   };
   
   // Add LIMIT if missing
-  const addLimit = () => {
+  const addLimit = (queryValue) => {
     if (!query.toUpperCase().includes('LIMIT')) {
       let updatedQuery = query.trim();
       updatedQuery += '\nLIMIT 100';
@@ -319,7 +319,7 @@ const SparqlInput = ({
                   <Button 
                     variant="outline-secondary" 
                     size="sm"
-                    onClick={() => addPrefix(prefixInfo.prefix, prefixInfo.uri)}
+                    onClick={() => addPrefix(prefixInfo.prefix, prefixInfo.uri, query)}
                   >
                     {prefixInfo.prefix}
                   </Button>
@@ -359,7 +359,7 @@ const SparqlInput = ({
                 <Button 
                   variant="outline-secondary" 
                   size="sm"
-                  onClick={addBasicStructure}
+                  onClick={() => addBasicStructure(query)}
                   className="me-2"
                 >
                   Add Basic Structure
@@ -367,7 +367,7 @@ const SparqlInput = ({
                 <Button 
                   variant="outline-secondary" 
                   size="sm"
-                  onClick={addLimit}
+                  onClick={() => addLimit(query)}
                 >
                   Add LIMIT
                 </Button>
@@ -410,4 +410,5 @@ const SparqlInput = ({
   );
 };
 
+export { formatSparqlQuery, validateSparqlQuery, addPrefix, addLimit, addBasicStructure };
 export default SparqlInput;

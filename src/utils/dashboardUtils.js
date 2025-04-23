@@ -220,36 +220,33 @@ export const saveDashboards = (dashboards) => {
   }
 };
 
-// Get a single dashboard by ID
-export const getDashboardById = (dashboardId) => {
-  if (!dashboardId) {
-    logger.warn('Attempted to get dashboard with empty ID');
+// Get a single dashboard by shareToken
+export const getDashboardByShareToken = (shareToken) => {
+  if (!shareToken) {
+    logger.warn('Attempted to get dashboard with empty shareToken');
     return null;
   }
 
-  logger.log('Attempting to get dashboard by ID', { dashboardId });
+  logger.log('Attempting to get dashboard by shareToken', { shareToken });
 
   try {
     const dashboards = getDashboards();
-    const dashboard = dashboards.find(dashboard => dashboard.id === dashboardId);
+    const dashboard = dashboards.find(dashboard => dashboard.shareToken === shareToken);
 
     if (!dashboard) {
-      logger.warn(`No dashboard found with ID: ${dashboardId}`);
+      logger.warn(`No dashboard found with shareToken: ${shareToken}`);
       return null;
     }
-    
-    // Sanitize the dashboard to fix any issues
-    const sanitizedDashboard = sanitizeDashboard(dashboard);
-    
-    logger.log('Dashboard found', { 
-      dashboardId, 
-      name: sanitizedDashboard.name,
-      panelCount: sanitizedDashboard.panels.length 
+
+    logger.log('Dashboard found', {
+      shareToken,
+      name: dashboard.name,
+      panelCount: dashboard.panels.length
     });
 
-    return sanitizedDashboard;
+    return dashboard;
   } catch (err) {
-    logger.error(`Error retrieving dashboard ${dashboardId}`, err);
+    logger.error(`Error retrieving dashboard with shareToken ${shareToken}`, err);
     return null;
   }
 };
@@ -374,7 +371,7 @@ export const createPanel = (
   });
 
   try {
-    const dashboard = getDashboardById(dashboardId);
+    const dashboard = getDashboardById(dashboardId); //the function getDashboardById exists, it is not the same as the new function
     
     if (!dashboard) {
       logger.error('Cannot create panel: Dashboard not found', { dashboardId });
@@ -470,7 +467,7 @@ export const deletePanel = (dashboardId, panelId) => {
       return false;
     }
     
-    const dashboard = getDashboardById(dashboardId);
+    const dashboard = getDashboardById(dashboardId); //the function getDashboardById exists, it is not the same as the new function
     
     if (!dashboard) {
       logger.error('Cannot delete panel: Dashboard not found', { dashboardId });
@@ -523,7 +520,7 @@ export const scheduleDashboardRefresh = (dashboardId, intervalMinutes) => {
     }
     
     // Get dashboard to update its refresh interval
-    const dashboard = getDashboardById(dashboardId);
+    const dashboard = getDashboardById(dashboardId); //the function getDashboardById exists, it is not the same as the new function
     
     if (!dashboard) {
       logger.error('Cannot set refresh schedule: Dashboard not found', { dashboardId });
@@ -566,7 +563,7 @@ export const exportDashboard = (dashboardId) => {
       return null;
     }
     
-    const dashboard = getDashboardById(dashboardId);
+    const dashboard = getDashboardById(dashboardId); //the function getDashboardById exists, it is not the same as the new function
     
     if (!dashboard) {
       logger.error('Cannot export: Dashboard not found', { dashboardId });
@@ -670,7 +667,7 @@ export const shareDashboard = (dashboardId, mode = 'view') => {
 
 // Duplicate dashboard
 export const duplicateDashboard = (dashboardId) => {
-  const originalDashboard = getDashboardById(dashboardId);
+  const originalDashboard = getDashboardById(dashboardId); //the function getDashboardById exists, it is not the same as the new function
   
   if (!originalDashboard) {
     return null;
