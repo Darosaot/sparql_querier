@@ -371,10 +371,10 @@ export const createPanel = (
   });
 
   try {
-    const dashboard = getDashboardById(dashboardId); //the function getDashboardById exists, it is not the same as the new function
-    
+    const dashboards = getDashboards();
+    const dashboard = dashboards.find(dashboard => dashboard.id === dashboardId);
     if (!dashboard) {
-      logger.error('Cannot create panel: Dashboard not found', { dashboardId });
+      logger.error('Cannot create panel: Dashboard not found with id ', { dashboardId });
       return null;
     }
     
@@ -467,10 +467,11 @@ export const deletePanel = (dashboardId, panelId) => {
       return false;
     }
     
-    const dashboard = getDashboardById(dashboardId); //the function getDashboardById exists, it is not the same as the new function
+    const dashboards = getDashboards();
+    const dashboard = dashboards.find(dashboard => dashboard.id === dashboardId);
     
     if (!dashboard) {
-      logger.error('Cannot delete panel: Dashboard not found', { dashboardId });
+      logger.error('Cannot delete panel: Dashboard not found with id ', { dashboardId });
       return false;
     }
     
@@ -520,10 +521,11 @@ export const scheduleDashboardRefresh = (dashboardId, intervalMinutes) => {
     }
     
     // Get dashboard to update its refresh interval
-    const dashboard = getDashboardById(dashboardId); //the function getDashboardById exists, it is not the same as the new function
-    
+    const dashboards = getDashboards();
+    const dashboard = dashboards.find(dashboard => dashboard.id === dashboardId);
+
     if (!dashboard) {
-      logger.error('Cannot set refresh schedule: Dashboard not found', { dashboardId });
+      logger.error('Cannot set refresh schedule: Dashboard not found with id ', { dashboardId });
       return false;
     }
     
@@ -563,9 +565,10 @@ export const exportDashboard = (dashboardId) => {
       return null;
     }
     
-    const dashboard = getDashboardById(dashboardId); //the function getDashboardById exists, it is not the same as the new function
-    
+    const dashboards = getDashboards();
+    const dashboard = dashboards.find(dashboard => dashboard.id === dashboardId);
     if (!dashboard) {
+
       logger.error('Cannot export: Dashboard not found', { dashboardId });
       return null;
     }
@@ -645,9 +648,11 @@ export const importDashboard = async (file) => {
 
 // Share dashboard (generate a shareable URL and token)
 export const shareDashboard = (dashboardId, mode = 'view') => {
-  const dashboard = getDashboardById(dashboardId);
-  
+  const dashboards = getDashboards();
+  const dashboard = dashboards.find(dashboard => dashboard.id === dashboardId);
+
   if (!dashboard) {
+    logger.error('Cannot share: Dashboard not found with id', {dashboardId});
     return null;
   }
   
@@ -667,9 +672,10 @@ export const shareDashboard = (dashboardId, mode = 'view') => {
 
 // Duplicate dashboard
 export const duplicateDashboard = (dashboardId) => {
-  const originalDashboard = getDashboardById(dashboardId); //the function getDashboardById exists, it is not the same as the new function
-  
+  const dashboards = getDashboards();
+  const originalDashboard = dashboards.find(dashboard => dashboard.id === dashboardId);
   if (!originalDashboard) {
+    logger.error('Cannot duplicate: Dashboard not found with id', {dashboardId});
     return null;
   }
   
