@@ -246,7 +246,7 @@ const SparqlInput = ({
     if (!query.trim()) {
       const basicQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n\nSELECT ?subject ?predicate ?object\nWHERE {\n  ?subject ?predicate ?object .\n  \n  # Add your conditions here\n  \n} LIMIT 100`;
       
-      setQuery(basicQuery);
+      setQuery(basicQuery);  
       setLineCount((basicQuery.match(/\n/g) || []).length + 1);
     }
   };
@@ -291,7 +291,7 @@ const SparqlInput = ({
             </datalist>
             <Form.Text className="text-muted">
               
-            </Form.Text>
+            </Form.Text> 
           </Form.Group>
 
           <Form.Group className="mb-3">
@@ -328,8 +328,8 @@ const SparqlInput = ({
 
           <Form.Group className="mb-3">
             <Form.Label>SPARQL Query</Form.Label>
-            <div className="editor-container d-flex border rounded">
-              <div className="line-numbers-container p-2 bg-light border-end">
+            <div className="editor-container d-flex border rounded" style={{border:"1px solid #ccc"}}>
+              <div className="line-numbers-container p-2 bg-light border-end" style={{color:"#666"}}>
                 <LineNumbers lines={lineCount} />
               </div>
               <Form.Control

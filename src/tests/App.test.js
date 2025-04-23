@@ -7,7 +7,7 @@ const testApp = async function() {
   console.log('  Starting Query Execution tests...');
 
   // 1.1 Valid Endpoint and Query
-  const validEndpoint = 'https://dbpedia.org/sparql';
+  const validEndpoint = 'https://publications.europa.eu/webapi/rdf/sparql';
   const validQuery = 'SELECT ?s WHERE { ?s ?p ?o } LIMIT 10';
   try {
     const result = await executeQuery(validEndpoint, validQuery);
@@ -32,7 +32,7 @@ const testApp = async function() {
   // 1.3 Invalid Query
   const invalidQuery = 'INVALID QUERY';
   try {
-    const result = await executeQuery(validEndpoint, invalidQuery);
+    const result = await executeQuery('https://dbpedia.org/sparql', invalidQuery);
     assert(!result.success, 'Invalid query should fail');
     console.log('    ✓ Invalid Query test passed');
   } catch (error) {
