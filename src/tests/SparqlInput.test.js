@@ -1,6 +1,5 @@
 // src/tests/SparqlInput.test.js
 import { assert } from '../utils/testUtils';
-import { formatSparqlQuery } from '../components/SparqlInput';
 
 // Function to validate basic SPARQL syntax
 const validateSparqlQuery = (query) => {
@@ -61,54 +60,6 @@ const validateSparqlQuery = (query) => {
   }
 
   return { valid: true, warnings };
-};
-
-// Function to format SPARQL query (basic formatting)
-const formatSparqlQuery = (query) => {
-    if (!query) return '';
-    
-    let formatted = query;
-    
-    // Ensure consistent spacing for keywords
-    const keywords = [
-      'PREFIX', 'SELECT', 'DISTINCT', 'CONSTRUCT', 'ASK', 'DESCRIBE', 
-      'FROM', 'WHERE', 'FILTER', 'OPTIONAL', 'UNION', 'MINUS', 'GRAPH', 
-      'SERVICE', 'GROUP BY', 'HAVING', 'ORDER BY', 'LIMIT', 'OFFSET'
-    ];
-    
-    // Ensure line breaks before major keywords
-    keywords.forEach(keyword => {
-      const regex = new RegExp(`(?<!(PREFIX|[a-z0-9_]))${keyword}\\b`, 'gi');
-      formatted = formatted.replace(regex, `\n${keyword}`);
-    });
-    
-    // Handle indentation
-    const lines = formatted.split('\n');
-    let indentLevel = 0;
-    const formattedLines = [];
-    
-    lines.forEach(line => {
-      let trimmedLine = line.trim();
-      if (!trimmedLine) {
-        formattedLines.push('');
-        return;
-      }
-      
-      // Decrease indent for closing brace
-      if (trimmedLine.includes('}')) {
-        indentLevel = Math.max(0, indentLevel - 1);
-      }
-      
-      // Add appropriate indentation
-      formattedLines.push('  '.repeat(indentLevel) + trimmedLine);
-      
-      // Increase indent for opening brace
-      if (trimmedLine.includes('{')) {
-        indentLevel++;
-      }
-    });
-    
-    return formattedLines.join('\n');
   };
 
 
@@ -140,7 +91,9 @@ const queryTemplates = {
   };
 
 // Test runner function
+import { formatSparqlQuery } from '../components/SparqlInput';
 export function testSparqlInput() {
+
   console.log('Starting SparqlInput tests...');
 
   // 1. SPARQL Query Validation
