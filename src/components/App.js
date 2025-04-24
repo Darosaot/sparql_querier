@@ -1,6 +1,7 @@
 // src/components/App.js
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useRouteError } from 'react-router-dom';
+
 import { Container, Row, Col, Nav, Tab, Alert } from 'react-bootstrap';
 import SparqlInput from './SparqlInput';
 import ErrorDisplay from './ErrorDisplay';
@@ -18,6 +19,7 @@ import { executeQuery, isValidSparql } from '../api/sparqlService';
 import ResultsTable from './ResultsTable';
 import SuccessDisplay from './SuccessDisplay';
 import SharedDashboard from './SharedDashboard';
+
 
 
 // Error Boundary Component
@@ -68,7 +70,7 @@ function App() {
     }
   }, []);
   
-  // Save query history to localStorage whenever it changes
+// Save query history to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('queryHistory', JSON.stringify(queryHistory));
   }, [queryHistory]);
@@ -127,7 +129,7 @@ function App() {
   
     const getQueryName = (queryText) => {
     // Look for SELECT or CONSTRUCT keyword
-    
+   
     const selectMatch = queryText.match(/SELECT\s+.+?\s+WHERE/i);
       if (selectMatch) {
       // Extract and return up to 30 characters after SELECT
@@ -144,7 +146,7 @@ function App() {
     return `Query ${new Date().toLocaleTimeString()}`;
   };
 
-  
+ 
   // Handle loading a query from history
   const handleLoadQuery = (historyItem) => {
     setQuery(historyItem.query);
@@ -171,7 +173,7 @@ function App() {
   };
   
   const Home = () => (
-    <div>
+    <div> {/* This div now wraps everything */}
         <Header />
         <Container fluid className="mb-5">
           <Tab.Container activeKey={activeTab} onSelect={(key) => setActiveTab(key)}>
@@ -264,22 +266,23 @@ function App() {
               </Col>
             </Row>
           </Container>
-          
-    </div>
-    </div>
+         
+        </footer>
+    </div> {/* Closing tag added here */}
     
   );
 
   return (
+    <ErrorBoundary>
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/shared/:shareToken" element={<SharedDashboard />} />
     </Routes>
-        </ErrorBoundary>
-
+    </ErrorBoundary> 
+  
+ 
   )
 }
 
 
 export default App;
-
