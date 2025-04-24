@@ -183,14 +183,14 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
         return (
           <div className="alert alert-warning">
             <strong>No data available</strong>
-            <p>The query returned no results or hasn't been executed yet. Click refresh to execute the query.</p>
+              <p>The query returned no results or hasn&apos;t been executed yet. Click refresh to execute the query.</p>
             <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
               Refresh Data
             </Button>
           </div>
         );
       }
-      
+
       switch (panel.type) {
         case 'table':
           return renderTable();
@@ -208,7 +208,7 @@ const DashboardPanel = ({ panel, onDelete, isEditMode }) => {
           return (
             <div className="alert alert-info">
               <strong>Panel type:</strong> {panel.type}
-              <p>This panel is configured but the visualization hasn't been loaded yet. Click refresh to load the data.</p>
+              <p>This panel is configured but the visualization hasn&apos;t been loaded yet. Click refresh to load the data.</p>
               <Button variant="outline-primary" size="sm" onClick={handleRefresh}>
                 Load Data
               </Button>

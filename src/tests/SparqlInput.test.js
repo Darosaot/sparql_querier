@@ -59,7 +59,7 @@ function testSparqlInput() {
 
   // Basic Formatting
   let formattedQuery = formatSparqlQuery('SELECT*WHERE{?s?p?o}');
-  assert(formattedQuery === 'SELECT\n  *\nWHERE\n  {\n    ?s\n    ?p\n    ?o\n  }\n', 'Basic formatting failed');
+  assert(formattedQuery === 'SELECT\n*\n\nWHERE\n{\n  ?s\n  ?p\n  ?o\n}\n', 'Basic formatting failed');
 
   // Keyword Handling
   formattedQuery = formatSparqlQuery('PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>SELECT * WHERE { ?s ?p ?o }');

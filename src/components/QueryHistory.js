@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Table, Button, Form, Row, Col, InputGroup } from 'react-bootstrap';
+import PropTypes from 'prop-types';
 
 /**
  * QueryHistory component to track and manage previous SPARQL queries
@@ -184,6 +185,13 @@ const QueryHistory = ({ queries, onLoadQuery, onDeleteQuery, onBookmarkQuery }) 
       </Card.Body>
     </Card>
   );
+};
+
+QueryHistory.propTypes = {
+  queries: PropTypes.array,
+  onLoadQuery: PropTypes.func,
+  onDeleteQuery: PropTypes.func,
+  onBookmarkQuery: PropTypes.func,
 };
 
 export default QueryHistory;

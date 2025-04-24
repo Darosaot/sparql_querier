@@ -763,10 +763,10 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
               value={`<iframe src="${shareUrl}" width="100%" height="600" frameborder="0"></iframe>`}
               readOnly 
               onClick={(e) => e.target.select()}
-            />
+            /> 
           ) : (
             <Form.Control
-              type="text"
+              type="text" 
               value={shareUrl}
               readOnly
               onClick={(e) => e.target.select()}

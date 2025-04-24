@@ -1,5 +1,6 @@
 // src/components/SparqlInput.js
 import React, { useState, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { Form, Button, Card, Alert, Row, Col, Tooltip, OverlayTrigger, Spinner } from 'react-bootstrap';
 import queryTemplates from '../data/queryTemplates';
 
@@ -70,18 +71,33 @@ function formatSparqlQuery(query) {
   
   let formatted = query;
   
-  // Ensure consistent spacing for keywords
+  // Ensure consistent line breaks for keywords
   const keywords = [
-    'PREFIX', 'SELECT', 'DISTINCT', 'CONSTRUCT', 'ASK', 'DESCRIBE', 
-    'FROM', 'WHERE', 'FILTER', 'OPTIONAL', 'UNION', 'MINUS', 'GRAPH', 
+    'PREFIX', 'DISTINCT', 'CONSTRUCT', 'ASK', 'DESCRIBE', 
+    'FROM', 'FILTER', 'OPTIONAL', 'UNION', 'MINUS', 'GRAPH',
     'SERVICE', 'GROUP BY', 'HAVING', 'ORDER BY', 'LIMIT', 'OFFSET'
   ];
   
-  // Ensure line breaks before major keywords
+  // Add line breaks before major keywords
   keywords.forEach(keyword => {
-    const regex = new RegExp(`(?<!(PREFIX|[a-z0-9_]))${keyword}\\b`, 'gi');
+    const regex = new RegExp(`(?<!(PREFIX|[a-z0-9_]))${keyword}\\b`, 'gi'); // This will ensure that the line break is not added after PREFIX
+
+
     formatted = formatted.replace(regex, `\n${keyword}`);
   });
+
+  // Add line break after SELECT and WHERE
+  formatted = formatted.replace(/(SELECT)/gi, '$1\n  ');
+  formatted = formatted.replace(/(WHERE)/gi, '$1\n');
+
+    // Add line break after *
+    formatted = formatted.replace(/\*/gi, '*\n');
+
+
+
+  // Remove consecutive newlines
+  formatted = formatted.replace(/[\r\n]{2,}/g, '\n');
+
   
   // Handle indentation
   const lines = formatted.split('\n');
@@ -90,7 +106,7 @@ function formatSparqlQuery(query) {
   
   lines.forEach(line => {
     let trimmedLine = line.trim();
-    if (!trimmedLine) {      
+    if (!trimmedLine) {
       formattedLines.push('');
       return;
     }
@@ -105,17 +121,18 @@ function formatSparqlQuery(query) {
     }
 
   });
-  
+
 
   return formattedLines.join('\n');
 };
+
 
 // List of common SPARQL prefixes with tooltips
 const commonPrefixes = [
   { prefix: 'rdf', uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', description: 'RDF basic vocabulary' },
   { prefix: 'rdfs', uri: 'http://www.w3.org/2000/01/rdf-schema#', description: 'RDF Schema vocabulary' },
   { prefix: 'owl', uri: 'http://www.w3.org/2002/07/owl#', description: 'Web Ontology Language' },
-  { prefix: 'xsd', uri: 'http://www.w3.org/2001/XMLSchema#', description: 'XML Schema Datatypes' },
+    { prefix: 'xsd', uri: 'http://www.w3.org/2001/XMLSchema#', description: 'XML Schema Datatypes' },
   { prefix: 'foaf', uri: 'http://xmlns.com/foaf/0.1/', description: 'Friend of a Friend vocabulary' },
   { prefix: 'dc', uri: 'http://purl.org/dc/elements/1.1/', description: 'Dublin Core elements' },
   { prefix: 'dct', uri: 'http://purl.org/dc/terms/', description: 'Dublin Core terms' },
@@ -149,7 +166,7 @@ function addPrefix(prefix, uri, queryValue) {
     const prefixDeclaration = `PREFIX ${prefix}: <${uri}>\n`;
     
         // Add at the beginning or after other prefixes
-    const lines = query.split('\n');
+        const lines = query.split('\n');
     let lastPrefixIndex = -1;
     
     for (let i = 0; i < lines.length; i++) {
@@ -159,10 +176,10 @@ function addPrefix(prefix, uri, queryValue) {
     }
     
     if (lastPrefixIndex >= 0) {
-      // Insert after the last prefix
+            // Insert after the last prefix
             lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
     } else {
-      // Insert at the beginning
+            // Insert at the beginning
             lines.unshift(prefixDeclaration);
     }
     
@@ -199,6 +216,7 @@ const handleAddPrefix = (prefix, uri, query, setQuery, setLineCount) => {
   setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
 };
 
+
 // Format the query
 const handleFormatQuery = (query, setQuery, setLineCount) => {
   const formatted = formatSparqlQuery(query);
@@ -207,19 +225,21 @@ const handleFormatQuery = (query, setQuery, setLineCount) => {
 };
 
   const handleAddBasicStructure = (query, setQuery, setLineCount) => {
-    const updatedQuery = addBasicStructure(query);
-    setQuery(updatedQuery);
-    setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
-  };
-const SparqlInput = ({ 
-  sparqlEndpoint, 
-  setSparqlEndpoint, 
-  query, 
-  setQuery, 
-  onExecute, 
-  isLoading 
+        const updatedQuery = addBasicStructure(query);
+        setQuery(updatedQuery);
+        setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
+    };
+
+const SparqlInput = ({
+    sparqlEndpoint,
+    setSparqlEndpoint,
+    query,
+    setQuery,
+    onExecute,
+    isLoading
 }) => {
   const [validationResult, setValidationResult] = useState({ valid: true, warnings: [] });
+    
   const [lineCount, setLineCount] = useState(1);
   const [queryName, setQueryName] = useState('');
   const textareaRef = useRef(null);
@@ -316,7 +336,7 @@ const SparqlInput = ({
             </datalist>
             <Form.Text className="text-muted">
               
-            </Form.Text> 
+            </Form.Text>
           </Form.Group>
 
           <Form.Group className="mb-3">
@@ -432,6 +452,20 @@ const SparqlInput = ({
     </Card>
   );
 };
+
+SparqlInput.propTypes = {
+    sparqlEndpoint: PropTypes.string,
+    setSparqlEndpoint: PropTypes.func,
+    query: PropTypes.string,
+    setQuery: PropTypes.func,
+    onExecute: PropTypes.func,
+    isLoading: PropTypes.bool,
+    lines: PropTypes.any,
+    'query.trim': PropTypes.any
+
+};
+
+
 
 export { formatSparqlQuery, validateSparqlQuery, addPrefix, addLimit, addBasicStructure };
 export default SparqlInput;

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Form, Button, Row, Col, Alert } from 'react-bootstrap';
 import Plot from 'react-plotly.js';
 import * as ss from 'simple-statistics';
+import PropTypes from 'prop-types';
 import _ from 'lodash';
 
 const RegressionAnalysis = ({ data, columns }) => {
@@ -360,6 +361,11 @@ const RegressionAnalysis = ({ data, columns }) => {
       </Card.Body>
     </Card>
   );
+};
+
+RegressionAnalysis.propTypes = {
+  data: PropTypes.array,
+  columns: PropTypes.array,
 };
 
 export default RegressionAnalysis;

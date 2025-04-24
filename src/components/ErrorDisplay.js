@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { Alert } from 'react-bootstrap';
 
 function ErrorDisplay({ error }) {
@@ -8,5 +9,9 @@ function ErrorDisplay({ error }) {
     </Alert>
   );
 }
+
+ErrorDisplay.propTypes = {
+  error: PropTypes.string
+};
 
 export default ErrorDisplay;

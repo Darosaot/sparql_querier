@@ -1,5 +1,6 @@
 import React from 'react';
 import { Alert } from 'react-bootstrap';
+import PropTypes from 'prop-types';
 
 function SuccessDisplay({ resultCount, columnCount }) {
   return (
@@ -8,5 +9,10 @@ function SuccessDisplay({ resultCount, columnCount }) {
     </Alert>
   );
 }
+
+SuccessDisplay.propTypes = {
+  resultCount: PropTypes.number.isRequired,
+  columnCount: PropTypes.number.isRequired,
+};
 
 export default SuccessDisplay;

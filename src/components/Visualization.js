@@ -1,6 +1,7 @@
 // src/components/Visualization.js
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Form, Row, Col, Button, Tabs, Tab, Alert, OverlayTrigger, Tooltip } from 'react-bootstrap';
+import PropTypes from 'prop-types';
 import Plot from 'react-plotly.js';
 import { processData } from '../utils/dataUtils';
 import _ from 'lodash';
@@ -2444,3 +2445,8 @@ const Visualization = ({ data, columns}) => {
 };
 
 export default Visualization;
+
+Visualization.propTypes = {
+  data: PropTypes.array.isRequired,
+  columns: PropTypes.array.isRequired
+};

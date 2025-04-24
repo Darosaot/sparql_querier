@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, Form, Button, Row, Col, Table, Alert, Tabs, Tab } from 'react-bootstrap';
 import * as ss from 'simple-statistics';
 import _ from 'lodash';
+import PropTypes from 'prop-types';
 
 const DataOperations = ({ data, columns }) => {
   // This keeps track of which tab is active (basic, groupby, stats)
@@ -634,5 +635,16 @@ const DataOperations = ({ data, columns }) => {
     </Card>
   );
 };
+
+DataOperations.propTypes = {
+  data: PropTypes.array,
+  columns: PropTypes.array,
+  'columns.length': PropTypes.number,
+  'columns.indexOf': PropTypes.number,
+  'data.map': PropTypes.number,
+  'data.length': PropTypes.number
+};
+
+
 
 export default DataOperations;

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Form, Button, Row, Col } from 'react-bootstrap';
+import PropTypes from 'prop-types';
 import { exportToCSV, exportToJSON, exportToExcel } from '../utils/exportUtils';
 
 const ExportOptions = ({ data, columns }) => {
@@ -53,6 +54,11 @@ const ExportOptions = ({ data, columns }) => {
       </Card.Body>
     </Card>
   );
+};
+
+ExportOptions.propTypes = {
+  data: PropTypes.array.isRequired,
+  columns: PropTypes.array.isRequired,
 };
 
 export default ExportOptions;

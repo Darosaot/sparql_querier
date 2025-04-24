@@ -1,7 +1,7 @@
 // src/components/App.js
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { Container, Row, Col, Nav, Tab } from 'react-bootstrap';
+import { Container, Row, Col, Nav, Tab, Alert } from 'react-bootstrap';
 import SparqlInput from './SparqlInput';
 import ErrorDisplay from './ErrorDisplay';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -17,7 +17,7 @@ import DashboardManager from './DashboardManager';
 import { executeQuery, isValidSparql } from '../api/sparqlService';
 import ResultsTable from './ResultsTable';
 import SuccessDisplay from './SuccessDisplay';
-import { testSparqlInput } from '../tests/SparqlInput.test'; // Import testSparqlInput function
+import SharedDashboard from './SharedDashboard';
 
 
 // Main App component
@@ -79,7 +79,7 @@ function App() {
         
         // Create a new history entry
         const historyEntry = {
-          id: timestamp, // Use timestamp as ID
+          id: timestamp,
           name: queryName,
           query: query,
           endpoint: sparqlEndpoint,
@@ -104,10 +104,9 @@ function App() {
     }
   };
   
-    const getQueryName = (queryText, queryName) => {
-        if(queryName){
-      }
+    const getQueryName = (queryText) => {
     // Look for SELECT or CONSTRUCT keyword
+    
     const selectMatch = queryText.match(/SELECT\s+.+?\s+WHERE/i);
       if (selectMatch) {
       // Extract and return up to 30 characters after SELECT
@@ -245,7 +244,7 @@ function App() {
       </div>
   );
 
-  return(
+  return (
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/shared/:shareToken" element={<SharedDashboard />} />
