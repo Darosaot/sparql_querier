@@ -231,6 +231,33 @@ export const getDashboardByShareToken = (shareToken) => {
   }
 };
 
+// Get dashboard by ID from localStorage
+export const getDashboardById = (dashboardId) => {
+  try {
+    if (!dashboardId) {
+      logger.error('getDashboardById: dashboardId is required.');
+      return null;
+    }
+
+    const dashboards = getDashboards(); 
+    const foundDashboard = dashboards.find((dashboard) => dashboard.id === dashboardId);
+
+    if (!foundDashboard) {
+      logger.warn(`getDashboardById: No dashboard found with id ${dashboardId}`);
+      return null;
+    }
+
+    logger.log('getDashboardById: Dashboard found', {
+      dashboardId: foundDashboard.id,
+      name: foundDashboard.name,
+    });
+    return foundDashboard;
+  } catch (error) {
+    logger.error(`getDashboardById: Error retrieving dashboard with id ${dashboardId}:`, error);
+    return null;
+  }
+};
+
 // Create a new dashboard
 export const createDashboard = (name, description = '') => {
   // Validate input
@@ -273,6 +300,7 @@ export const createDashboard = (name, description = '') => {
     return null;
   }
 };
+
 
 // Save or update a dashboard
 export const saveDashboard = (dashboard) => {
