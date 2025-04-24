@@ -1,7 +1,7 @@
 import { executeQuery } from '../api/sparqlService';
 import { assert } from '../utils/testUtils';
 
-export const testApp = async function() {
+const testApp = async function() {
   console.log('Starting App component tests...');
 
   console.log('  Starting Query Execution tests...');
@@ -10,7 +10,7 @@ export const testApp = async function() {
   const validEndpoint = 'https://publications.europa.eu/webapi/rdf/sparql';
   const validQuery = 'SELECT ?s WHERE { ?s ?p ?o } LIMIT 10';
   try {
-    const result = await executeQuery(validEndpoint, validQuery);
+    const result = await await executeQuery(validEndpoint, validQuery);
     assert(result.success, 'Valid endpoint and query should succeed');
     assert(result.data.length > 0, 'Valid query should return results');
     console.log('    ✓ Valid Endpoint and Query test passed');
@@ -22,7 +22,7 @@ export const testApp = async function() {
   const invalidEndpoint = 'http://invalid-endpoint';
   const anyQuery = 'SELECT * WHERE { ?s ?p ?o }';
   try {
-    const result = await executeQuery(invalidEndpoint, anyQuery);
+    const result = await await executeQuery(invalidEndpoint, anyQuery);
     assert(!result.success, 'Invalid endpoint should fail');
     console.log('    ✓ Invalid Endpoint test passed');
   } catch (error) {
@@ -32,7 +32,7 @@ export const testApp = async function() {
   // 1.3 Invalid Query
   const invalidQuery = 'INVALID QUERY';
   try {
-    const result = await executeQuery('https://dbpedia.org/sparql', invalidQuery);
+    const result = await await executeQuery('https://dbpedia.org/sparql', invalidQuery);
     assert(!result.success, 'Invalid query should fail');
     console.log('    ✓ Invalid Query test passed');
   } catch (error) {
@@ -42,7 +42,7 @@ export const testApp = async function() {
   // 1.4 No Results
   const noResultsQuery = 'SELECT * WHERE { ?s ?p ?o FILTER (?s = <http://example.com/nonexistent>) }';
   try {
-    const result = await executeQuery(validEndpoint, noResultsQuery);
+    const result = await await executeQuery(validEndpoint, noResultsQuery);
     assert(result.success, 'No results query should succeed');
     assert(result.data.length === 0, 'No results query should return no data');
     console.log('    ✓ No Results test passed');
@@ -52,7 +52,7 @@ export const testApp = async function() {
 
   // 1.5 Empty Endpoint
   try {
-    const result = await executeQuery("", anyQuery);
+    const result = await await executeQuery("", anyQuery);
     assert(!result.success, 'Empty Endpoint query should fail');    
     console.log('    ✓ Empty Endpoint test passed');    
   } catch (error) {
@@ -66,9 +66,9 @@ export const testApp = async function() {
   console.log('  Starting query history tests...');
 
     // Add Query :
-    const addQueryTest = () => {
-      let queryHistory;
-      const historyEntry = {
+    const addQueryTest = async () => {
+      let queryHistory = [];
+      const historyEntry =  {
         id: 'test',
         name: 'Test Query',
         query: 'SELECT * WHERE {?s ?p ?o}',
@@ -76,16 +76,15 @@ export const testApp = async function() {
         resultCount: 0,
         executionTime: 0,
         bookmarked: false,
-      };      
       };
       queryHistory = [historyEntry, ...queryHistory];
       assert(queryHistory.length === 1, 'Adding a query should increase history length');
       console.log('    ✓ Add Query test passed');
     };
-    addQueryTest();
+    await addQueryTest();
 
       // Delete Query:
-    const deleteQueryTest = () => {
+    const deleteQueryTest = async () => {
         let queryHistory;
         const historyEntry = {
         id: 'test',
@@ -101,10 +100,10 @@ export const testApp = async function() {
         assert(queryHistory.length === 0, 'Deleting a query should decrease history length');
         console.log('    ✓ Delete Query test passed');
     };
-    deleteQueryTest();
+    await deleteQueryTest();
 
     // Bookmark:
-    const bookmarkQueryTest = () => {
+    const bookmarkQueryTest = async () => {
         let queryHistory;
         const historyEntry = {
         id: 'test',
@@ -124,10 +123,10 @@ export const testApp = async function() {
         assert(queryHistory[0].bookmarked === true, 'Query should be bookmarked');
         console.log('    ✓ Bookmark test passed');
     };
-    bookmarkQueryTest();
+    await bookmarkQueryTest();
 
     // Load query
-    const loadQueryTest = () => {
+    const loadQueryTest = async () => {
         let queryHistory;
         const historyEntry = {
         id: 'test',
@@ -144,7 +143,7 @@ export const testApp = async function() {
         assert(loadedQuery === 'SELECT * WHERE {?s ?p ?o}', 'Loading a query should return the query');
         console.log('    ✓ Load query test passed');
     };
-    loadQueryTest();    
+    await loadQueryTest();
 
     console.log('  Ending query history tests.');
 

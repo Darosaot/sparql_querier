@@ -1,5 +1,4 @@
 // src/components/SparqlInput.js
-// src/components/EnhancedSparqlEditor.js
 import React, { useState, useRef } from 'react';
 import { Form, Button, Card, Alert, Row, Col, Tooltip, OverlayTrigger, Spinner } from 'react-bootstrap';
 import queryTemplates from '../data/queryTemplates';
@@ -13,7 +12,7 @@ const validateSparqlQuery = (query) => {
   const warnings = [];
   const upperQuery = query.toUpperCase();
   
-  // Check query type and required clauses
+  // Check query type and required clause
   if (upperQuery.includes('SELECT')) {
     if (!upperQuery.includes('WHERE')) {
       return { valid: false, error: 'SELECT query must include a WHERE clause' };
@@ -39,7 +38,7 @@ const validateSparqlQuery = (query) => {
   const openBraces = (query.match(/\{/g) || []).length;
   const closeBraces = (query.match(/\}/g) || []).length;
   
-  if (openBraces !== closeBraces) {
+  if(openBraces !== closeBraces){
     return { 
       valid: false, 
       error: `Unbalanced braces: ${openBraces} opening and ${closeBraces} closing braces` 
@@ -65,8 +64,8 @@ const validateSparqlQuery = (query) => {
   return { valid: true, warnings };
 };
 
-// Function to format SPARQL query (basic formatting)
-const formatSparqlQuery = (query) => {
+// Function to format SPARQL query (basic formatting)  
+function formatSparqlQuery(query) {
   if (!query) return '';
   
   let formatted = query;
@@ -78,7 +77,7 @@ const formatSparqlQuery = (query) => {
     'SERVICE', 'GROUP BY', 'HAVING', 'ORDER BY', 'LIMIT', 'OFFSET'
   ];
   
-  // Ensure line breaks before major keywords
+    // Ensure line breaks before major keywords
   keywords.forEach(keyword => {
     const regex = new RegExp(`(?<!(PREFIX|[a-z0-9_]))${keyword}\\b`, 'gi');
     formatted = formatted.replace(regex, `\n${keyword}`);
@@ -113,8 +112,6 @@ const formatSparqlQuery = (query) => {
   return formattedLines.join('\n');
 };
 
-
-
 // List of common SPARQL prefixes with tooltips
 const commonPrefixes = [
   { prefix: 'rdf', uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', description: 'RDF basic vocabulary' },
@@ -147,6 +144,75 @@ const LineNumbers = ({ lines }) => {
   );
 };
 
+ // Add common prefix to query
+function addPrefix(prefix, uri, query) {
+  // Check if the prefix is already in the query
+  if (!query.includes(`PREFIX ${prefix}:`)) {
+    const prefixDeclaration = `PREFIX ${prefix}: <${uri}>\n`;
+    
+    // Add at the beginning or after other prefixes
+    const lines = query.split('\n');
+    let lastPrefixIndex = -1;
+    
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].trim().toUpperCase().startsWith('PREFIX')) {
+        lastPrefixIndex = i;
+      }
+    }
+    
+    if (lastPrefixIndex >= 0) {
+      // Insert after the last prefix
+      lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
+    } else {
+      // Insert at the beginning
+      lines.unshift(prefixDeclaration);
+    }
+    
+    const updatedQuery = lines.join('\n');
+    return updatedQuery;
+  }
+  return query;
+};
+
+// Add a basic query template if empty
+function addBasicStructure(query) {
+  if (!query.trim()) {
+    const basicQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n\nSELECT ?subject ?predicate ?object\nWHERE {\n  ?subject ?predicate ?object .\n  \n  # Add your conditions here\n  \n} LIMIT 100`;
+    
+    return basicQuery;
+  }
+  return query;
+};
+
+// Add LIMIT if missing
+function addLimit(query) {
+  if (!query.toUpperCase().includes('LIMIT')) {
+    let updatedQuery = query.trim();
+    updatedQuery += '\nLIMIT 100';
+    return updatedQuery;
+  }
+  return query
+};
+
+// Add common prefix to query
+const handleAddPrefix = (prefix, uri, query, setQuery, setLineCount) => {
+    const updatedQuery = addPrefix(prefix, uri, query);
+    setQuery(updatedQuery);
+    setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
+};
+
+   // Format the query
+const handleFormatQuery = (query, setQuery, setLineCount) => {
+  const formatted = formatSparqlQuery(query);
+  setQuery(formatted);
+  setLineCount((formatted.match(/\n/g) || []).length + 1);
+};
+
+  const handleAddBasicStructure = (query, setQuery, setLineCount) => {
+    const updatedQuery = addBasicStructure(query);
+    setQuery(updatedQuery);
+    setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
+  };
 const SparqlInput = ({ 
   sparqlEndpoint, 
   setSparqlEndpoint, 
@@ -206,42 +272,11 @@ const SparqlInput = ({
     }
   };
 
-  // Add common prefix to query
-  const addPrefix = (prefix, uri, queryValue) => {
-    // Check if the prefix is already in the query
-    if (!query.includes(`PREFIX ${prefix}:`)) {
-      const prefixDeclaration = `PREFIX ${prefix}: <${uri}>\n`;
-      
-      // Add at the beginning or after other prefixes
-      const lines = query.split('\n');
-      let lastPrefixIndex = -1;
-      
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i].trim().toUpperCase().startsWith('PREFIX')) {
-          lastPrefixIndex = i;
-        }
-      }
-      
-      if (lastPrefixIndex >= 0) {
-        // Insert after the last prefix
-        lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
-      } else {
-        // Insert at the beginning
-        lines.unshift(prefixDeclaration);
-      }
-      
-      const updatedQuery = lines.join('\n');
-      setQuery(updatedQuery, queryValue);
-      setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
-    }
-  };
-
-   // Format the query
-  const handleFormatQuery = () => {
-    const formatted = formatSparqlQuery(query);
-    setQuery(formatted);
-    setLineCount((formatted.match(/\n/g) || []).length + 1);
-  };
+  const handleAddLimit = () => {
+    const updatedQuery = addLimit(query);
+    setQuery(updatedQuery);
+    setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
+  }
 
   // Add a basic query template if empty
   const addBasicStructure = () => {
@@ -253,16 +288,6 @@ const SparqlInput = ({
     }
   };
   
-  // Add LIMIT if missing
-  const addLimit = (queryValue) => {
-    if (!query.toUpperCase().includes('LIMIT')) {
-      let updatedQuery = query.trim();
-      updatedQuery += '\nLIMIT 100';
-      setQuery(updatedQuery);
-      setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
-    }
-  };
-
   return (
     <Card>
       <Card.Header as="h5">SPARQL Editor</Card.Header>
@@ -319,7 +344,7 @@ const SparqlInput = ({
                   <Button 
                     variant="outline-secondary" 
                     size="sm"
-                    onClick={() => addPrefix(prefixInfo.prefix, prefixInfo.uri, query)}
+                    onClick={() => handleAddPrefix(prefixInfo.prefix, prefixInfo.uri,query, setQuery, setLineCount)}
                   >
                     {prefixInfo.prefix}
                   </Button>
@@ -351,7 +376,7 @@ const SparqlInput = ({
                 <Button 
                   variant="outline-secondary" 
                   size="sm"
-                  onClick={handleFormatQuery}
+                  onClick={() => handleFormatQuery(query, setQuery, setLineCount)}
                   className="me-2"
                 >
                   Format Query
@@ -367,7 +392,7 @@ const SparqlInput = ({
                 <Button 
                   variant="outline-secondary" 
                   size="sm"
-                  onClick={() => addLimit(query)}
+                  onClick={() => handleAddLimit()}
                 >
                   Add LIMIT
                 </Button>

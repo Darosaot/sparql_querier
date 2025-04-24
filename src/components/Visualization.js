@@ -185,25 +185,35 @@ const Visualization = ({ data, columns}) => {
     }
     
     switch (operation) {
-      case 'sum':
+      case 'sum': {
         return numericValues.reduce((sum, val) => sum + val, 0);
-      case 'avg':
+      }
+      case 'avg': {
         return numericValues.reduce((sum, val) => sum + val, 0) / numericValues.length;
-      case 'count':
+      }
+      case 'count': {
         return values.length;
-      case 'min':
+      }
+      case 'min': {
         return Math.min(...numericValues);
-      case 'max':
+      }
+      case 'max': {
         return Math.max(...numericValues);
-      case 'median':
+      }
+      case 'median': {
         numericValues.sort((a, b) => a - b);
         const mid = Math.floor(numericValues.length / 2);
         return numericValues.length % 2 !== 0
           ? numericValues[mid]
           : (numericValues[mid - 1] + numericValues[mid]) / 2;
+      }
       default:
         return 0;
     }
+  };
+
+
+
   };
 
   // Group data by the X-axis and apply the selected operation to Y-axis values

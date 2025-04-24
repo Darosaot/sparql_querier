@@ -273,7 +273,7 @@ const RegressionAnalysis = ({ data, columns }) => {
         
         {isCategorical && (
           <Alert variant="info" className="mt-3">
-            <strong>Note:</strong> You've selected a categorical variable ({independentVar}) for regression. 
+            <strong>Note:</strong> You&apos;ve selected a categorical variable ({independentVar}) for regression. 
             The regression model has been fitted by encoding categorical values as numbers, but this may not 
             be statistically meaningful. Consider this as an exploratory analysis.
           </Alert>

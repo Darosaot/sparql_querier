@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Table, Pagination, Form, InputGroup } from 'react-bootstrap';
+import PropTypes from 'prop-types';
 
 const ResultsTable = ({ data, columns }) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -126,3 +127,9 @@ const ResultsTable = ({ data, columns }) => {
 };
 
 export default ResultsTable;
+
+// Prop types validation
+ResultsTable.propTypes = {
+  data: PropTypes.arrayOf(PropTypes.array).isRequired,
+  columns: PropTypes.arrayOf(PropTypes.string).isRequired,
+};
