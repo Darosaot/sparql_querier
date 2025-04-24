@@ -19,24 +19,22 @@ export function formatSparqlQuery(query) {
   
   // Add line breaks before major keywords
   keywords.forEach(keyword => {
-    const regex = new RegExp(`(?<!(PREFIX|[a-z0-9_]))${keyword}\\b`, 'gi'); // This will ensure that the line break is not added after PREFIX
-
-
-    formatted = formatted.replace(regex, `\n${keyword}`);
+    // Modified regex to avoid using negative lookbehind for broader compatibility
+    const regex = new RegExp(`(^|\\s)${keyword}\\b`, 'gi');
+    formatted = formatted.replace(regex, (match, p1) => {
+      return p1 === '\n' ? match : `\n${keyword}`;
+    });
   });
 
   // Add line break after SELECT and WHERE
   formatted = formatted.replace(/(SELECT)/gi, '$1\n  ');
   formatted = formatted.replace(/(WHERE)/gi, '$1\n');
 
-    // Add line break after *
-    formatted = formatted.replace(/\*/gi, '*\n');
-
-
+  // Add line break after *
+  formatted = formatted.replace(/\*/gi, '*\n');
 
   // Remove consecutive newlines
   formatted = formatted.replace(/[\r\n]{2,}/g, '\n');
-
   
   // Handle indentation
   const lines = formatted.split('\n');
@@ -58,12 +56,10 @@ export function formatSparqlQuery(query) {
     if (trimmedLine.includes('{')) {
       indentLevel++;
     }
-
   });
 
-
   return formattedLines.join('\n');
-};
+}
 
 // Add common prefix to query
 export function addPrefix(prefix, uri, queryValue) {
@@ -71,8 +67,8 @@ export function addPrefix(prefix, uri, queryValue) {
   if (!queryValue.includes(`PREFIX ${prefix}:`)) {
     const prefixDeclaration = `PREFIX ${prefix}: <${uri}>\n`;
     
-        // Add at the beginning or after other prefixes
-        const lines = queryValue.split('\n');
+    // Add at the beginning or after other prefixes
+    const lines = queryValue.split('\n');
     let lastPrefixIndex = -1;
     
     for (let i = 0; i < lines.length; i++) {
@@ -82,18 +78,18 @@ export function addPrefix(prefix, uri, queryValue) {
     }
     
     if (lastPrefixIndex >= 0) {
-            // Insert after the last prefix
-            lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
+      // Insert after the last prefix
+      lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
     } else {
-            // Insert at the beginning
+      // Insert at the beginning
       lines.unshift(prefixDeclaration);
     }
     
     const updatedQuery = lines.join('\n');
-    return updatedQuery
+    return updatedQuery;
   }
-  return query;
-};
+  return queryValue;
+}
 
 // Add LIMIT if missing
 export function addLimit(query) {
@@ -104,6 +100,7 @@ export function addLimit(query) {
   }
   return query;
 }
+
 // Function to validate basic SPARQL syntax
 export const validateSparqlQuery = (query) => {
   if (!query || query.trim() === '') {
@@ -171,17 +168,16 @@ export function addBasicStructure(query) {
     const basicQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n\nSELECT ?subject ?predicate ?object\nWHERE {\n  ?subject ?predicate ?object .\n  \n  # Add your conditions here\n  \n} LIMIT 100`;
     
     return basicQuery;
-    }
-  return query
+  }
+  return query;
 }
-
 
 // List of common SPARQL prefixes with tooltips
 const commonPrefixes = [
   { prefix: 'rdf', uri: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', description: 'RDF basic vocabulary' },
   { prefix: 'rdfs', uri: 'http://www.w3.org/2000/01/rdf-schema#', description: 'RDF Schema vocabulary' },
   { prefix: 'owl', uri: 'http://www.w3.org/2002/07/owl#', description: 'Web Ontology Language' },
-    { prefix: 'xsd', uri: 'http://www.w3.org/2001/XMLSchema#', description: 'XML Schema Datatypes' },
+  { prefix: 'xsd', uri: 'http://www.w3.org/2001/XMLSchema#', description: 'XML Schema Datatypes' },
   { prefix: 'foaf', uri: 'http://xmlns.com/foaf/0.1/', description: 'Friend of a Friend vocabulary' },
   { prefix: 'dc', uri: 'http://purl.org/dc/elements/1.1/', description: 'Dublin Core elements' },
   { prefix: 'dct', uri: 'http://purl.org/dc/terms/', description: 'Dublin Core terms' },
@@ -194,10 +190,10 @@ const endpointSuggestions = [
   { url: 'https://dbpedia.org/sparql', description: 'DBpedia - General knowledge from Wikipedia' },
   { url: 'https://query.wikidata.org/sparql', description: 'Wikidata - Structured data from Wikimedia projects' },
   { url: 'https://publications.europa.eu/webapi/rdf/sparql', description: 'Publications Office - Cellar' },
-    { url: 'http://linkedgeodata.org/sparql', description: 'LinkedGeoData - Spatial data from OpenStreetMap' }
+  { url: 'http://linkedgeodata.org/sparql', description: 'LinkedGeoData - Spatial data from OpenStreetMap' }
 ];
 
-// Line number helper function
+// Line number helper component
 const LineNumbers = ({ lines }) => {
   return (
     <div className="line-numbers">
@@ -208,40 +204,19 @@ const LineNumbers = ({ lines }) => {
   );
 };
 
-
-// Add common prefix to query
-const handleAddPrefix = (prefix, uri, query, setQuery, setLineCount) => {
-  const updatedQuery = addPrefix(prefix, uri, query);
-
-  setQuery(updatedQuery);
-  setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
+LineNumbers.propTypes = {
+  lines: PropTypes.number.isRequired
 };
-
-
-// Format the query
-const handleFormatQuery = (query, setQuery, setLineCount) => {
-  const formatted = formatSparqlQuery(query);
-  setQuery(formatted);
-  setLineCount((formatted.match(/\n/g) || []).length + 1);
-};
-
-const handleAddBasicStructure = (query, setQuery, setLineCount) => {
-        const updatedQuery = addBasicStructure(query);
-        setQuery(updatedQuery);
-        setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
-    };
 
 const SparqlInput = ({
-    sparqlEndpoint,
-    setSparqlEndpoint,
-    query,
-    setQuery,
-    onExecute,
-    isLoading
+  sparqlEndpoint,
+  setSparqlEndpoint,
+  query,
+  setQuery,
+  onExecute,
+  isLoading
 }) => {
   const [validationResult, setValidationResult] = useState({ valid: true, warnings: [] });
-  
-    
   const [lineCount, setLineCount] = useState(1);
   const [queryName, setQueryName] = useState('');
   const textareaRef = useRef(null);
@@ -292,11 +267,32 @@ const SparqlInput = ({
     }
   };
 
+  // Add common prefix to query
+  const handleAddPrefix = (prefix, uri, currentQuery, setQueryFunc, setLineCountFunc) => {
+    const updatedQuery = addPrefix(prefix, uri, currentQuery);
+    setQueryFunc(updatedQuery);
+    setLineCountFunc((updatedQuery.match(/\n/g) || []).length + 1);
+  };
+
+  // Format the query
+  const handleFormatQuery = (currentQuery, setQueryFunc, setLineCountFunc) => {
+    const formatted = formatSparqlQuery(currentQuery);
+    setQueryFunc(formatted);
+    setLineCountFunc((formatted.match(/\n/g) || []).length + 1);
+  };
+
+  const handleAddBasicStructure = (currentQuery, setQueryFunc, setLineCountFunc) => {
+    const updatedQuery = addBasicStructure(currentQuery);
+    setQueryFunc(updatedQuery);
+    setLineCountFunc((updatedQuery.match(/\n/g) || []).length + 1);
+  };
+
   const handleAddLimit = () => {
-    const query = query;
     const updatedQuery = addLimit(query);
     setQuery(updatedQuery);
     setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
+  };
+
   return (
     <Card>
       <Card.Header as="h5">SPARQL Editor</Card.Header>
@@ -353,7 +349,7 @@ const SparqlInput = ({
                   <Button 
                     variant="outline-secondary" 
                     size="sm"
-                    onClick={() => handleAddPrefix(prefixInfo.prefix, prefixInfo.uri,query, setQuery, setLineCount)}
+                    onClick={() => handleAddPrefix(prefixInfo.prefix, prefixInfo.uri, query, setQuery, setLineCount)}
                   >
                     {prefixInfo.prefix}
                   </Button>
@@ -401,7 +397,7 @@ const SparqlInput = ({
                 <Button 
                   variant="outline-secondary" 
                   size="sm"
-                  onClick={() => handleAddLimit()}
+                  onClick={handleAddLimit}
                 >
                   Add LIMIT
                 </Button>    
@@ -445,15 +441,12 @@ const SparqlInput = ({
 };
 
 SparqlInput.propTypes = {
-    sparqlEndpoint: PropTypes.string,
-    setSparqlEndpoint: PropTypes.func,
-    query: PropTypes.string,
-    setQuery: PropTypes.func,
-    onExecute: PropTypes.func,
-    isLoading: PropTypes.bool,
-    lines: PropTypes.number,
-    
+  sparqlEndpoint: PropTypes.string,
+  setSparqlEndpoint: PropTypes.func,
+  query: PropTypes.string,
+  setQuery: PropTypes.func,
+  onExecute: PropTypes.func,
+  isLoading: PropTypes.bool
 };
-
 
 export default SparqlInput;
