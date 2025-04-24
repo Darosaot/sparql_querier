@@ -194,29 +194,30 @@ function App() {
               <Col>
                 <Tab.Content>
                   <Tab.Pane eventKey="sparql-query">
-                    {/* Use our SparqlInput component */}
-                    <SparqlInput
-                      sparqlEndpoint={sparqlEndpoint}
-                      setSparqlEndpoint={setSparqlEndpoint}
-                      query={query}
-                      setQuery={setQuery}
-                      isLoading={isLoading}
-                      onExecute={handleExecuteQuery}
-                    />
-                    {error && <ErrorDisplay error={error} />}
-                    {queryResults && queryResults.data.length > 0 && (
-                      <>
-                        <SuccessDisplay
-                          resultCount={queryResults.data.length}
-                          columnCount={queryResults.columns.length}
-                          executionTime={queryResults.executionTime}
-                        />
-                        <div className="mt-4">
-                          <h3 className="mb-3">Results</h3>
-                          <ResultsTable data={queryResults.data} columns={queryResults.columns} />
-                        </div>
-                        <div className="mt-4">
-                          <h3 className="mb-3">Data Visualization</h3>
+                  <div>
+                      {/* Use our SparqlInput component */}
+                      <SparqlInput
+                        sparqlEndpoint={sparqlEndpoint}
+                        setSparqlEndpoint={setSparqlEndpoint}
+                        query={query}
+                        setQuery={setQuery}
+                        isLoading={isLoading}
+                        onExecute={handleExecuteQuery}
+                      />
+                      {error && <ErrorDisplay error={error} />}
+                      {queryResults && queryResults.data.length > 0 && (
+                        <>
+                          <SuccessDisplay
+                            resultCount={queryResults.data.length}
+                            columnCount={queryResults.columns.length}
+                            executionTime={queryResults.executionTime}
+                          />
+                          <div className="mt-4">
+                            <h3 className="mb-3">Results</h3>
+                            <ResultsTable data={queryResults.data} columns={queryResults.columns} />
+                          </div>
+                          <div className="mt-4">
+                            <h3 className="mb-3">Data Visualization</h3>
                           <Visualization data={queryResults.data} columns={queryResults.columns} />
                         </div>
                         <div className="mt-4">
@@ -231,8 +232,10 @@ function App() {
                           <h3 className="mb-3">Export Results</h3>
                           <ExportOptions data={queryResults.data} columns={queryResults.columns} />
                         </div>
-                      </>
-                    )}
+                        </>
+                      )}
+                    </div>
+
                   </Tab.Pane>
                   <Tab.Pane eventKey="query-history">
                     <QueryHistory
