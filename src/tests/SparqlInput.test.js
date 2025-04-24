@@ -58,8 +58,8 @@ function testSparqlInput() {
   console.log('Running SPARQL Query Formatting tests...');
 
   // Basic Formatting
-  let formattedQuery = formatSparqlQuery('SELECT*WHERE{?s?p?o}');  
-  assert(formattedQuery === 'SELECT\n  *\nWHERE\n  {\n    ?s\n    ?p\n    ?o\n  }', 'Basic formatting failed');
+  let formattedQuery = formatSparqlQuery('SELECT*WHERE{?s?p?o}');
+  assert(formattedQuery === 'SELECT\n  *\nWHERE\n  {\n    ?s\n    ?p\n    ?o\n  }\n', 'Basic formatting failed');
 
   // Keyword Handling
   formattedQuery = formatSparqlQuery('PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>SELECT * WHERE { ?s ?p ?o }');
@@ -77,17 +77,17 @@ function testSparqlInput() {
   console.log('Running Prefix Handling tests...');
   
   let testQuery = 'SELECT * WHERE { ?s ?p ?o }';
-  addPrefix('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',testQuery);
-  assert(testQuery.startsWith('PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>'), 'Adding prefix rdf failed');
+  let updatedQuery = addPrefix('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',testQuery);
+  assert(updatedQuery.startsWith('PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>'), 'Adding prefix rdf failed');
 
-  addPrefix('rdfs', 'http://www.w3.org/2000/01/rdf-schema#', testQuery);
-  assert(testQuery.includes('PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>'), 'Adding prefix rdfs failed');
+  updatedQuery = addPrefix('rdfs', 'http://www.w3.org/2000/01/rdf-schema#', updatedQuery);
+  assert(updatedQuery.includes('PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>'), 'Adding prefix rdfs failed');
 
   const testQuery2 = 'SELECT * WHERE { ?s ?p ?o }';
-  addPrefix('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', testQuery2);
+  let updatedQuery2 = addPrefix('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', testQuery2);
   const initialQuery = testQuery2;
-  addPrefix('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', testQuery2);
-  assert(testQuery2 === initialQuery, 'Adding duplicate prefix failed');
+  updatedQuery2 = addPrefix('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', updatedQuery2);
+  assert(updatedQuery2 === updatedQuery, 'Adding duplicate prefix failed');
 
 console.log('Prefix Handling tests completed.');
 

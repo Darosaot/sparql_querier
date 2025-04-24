@@ -64,7 +64,7 @@ const validateSparqlQuery = (query) => {
   return { valid: true, warnings };
 };
 
-// Function to format SPARQL query (basic formatting)  
+// Function to format SPARQL query (basic formatting)
 function formatSparqlQuery(query) {
   if (!query) return '';
   
@@ -77,7 +77,7 @@ function formatSparqlQuery(query) {
     'SERVICE', 'GROUP BY', 'HAVING', 'ORDER BY', 'LIMIT', 'OFFSET'
   ];
   
-    // Ensure line breaks before major keywords
+  // Ensure line breaks before major keywords
   keywords.forEach(keyword => {
     const regex = new RegExp(`(?<!(PREFIX|[a-z0-9_]))${keyword}\\b`, 'gi');
     formatted = formatted.replace(regex, `\n${keyword}`);
@@ -94,18 +94,14 @@ function formatSparqlQuery(query) {
       formattedLines.push('');
       return;
     }
-    
-    // Decrease indent for closing brace
     if (trimmedLine.includes('}')) {
       indentLevel = Math.max(0, indentLevel - 1);
     }
-    
-    // Add appropriate indentation
-    formattedLines.push('  '.repeat(indentLevel) + trimmedLine);
-    
-    // Increase indent for opening brace
-    if (trimmedLine.includes('{')) {
-      indentLevel++;
+    if (trimmedLine.length > 0) {
+      formattedLines.push('  '.repeat(indentLevel) + trimmedLine);
+      if (trimmedLine.includes('{')) {
+        indentLevel++;
+      }
     }
   });
   
@@ -144,13 +140,13 @@ const LineNumbers = ({ lines }) => {
   );
 };
 
- // Add common prefix to query
-function addPrefix(prefix, uri, query) {
+// Add common prefix to query
+function addPrefix(prefix, uri, queryValue) {
   // Check if the prefix is already in the query
   if (!query.includes(`PREFIX ${prefix}:`)) {
     const prefixDeclaration = `PREFIX ${prefix}: <${uri}>\n`;
     
-    // Add at the beginning or after other prefixes
+        // Add at the beginning or after other prefixes
     const lines = query.split('\n');
     let lastPrefixIndex = -1;
     
@@ -162,14 +158,14 @@ function addPrefix(prefix, uri, query) {
     
     if (lastPrefixIndex >= 0) {
       // Insert after the last prefix
-      lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
+            lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
     } else {
       // Insert at the beginning
-      lines.unshift(prefixDeclaration);
+            lines.unshift(prefixDeclaration);
     }
     
     const updatedQuery = lines.join('\n');
-    return updatedQuery;
+        return updatedQuery
   }
   return query;
 };
@@ -180,8 +176,8 @@ function addBasicStructure(query) {
     const basicQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n\nSELECT ?subject ?predicate ?object\nWHERE {\n  ?subject ?predicate ?object .\n  \n  # Add your conditions here\n  \n} LIMIT 100`;
     
     return basicQuery;
-  }
-  return query;
+    }
+    return query;
 };
 
 // Add LIMIT if missing
@@ -196,12 +192,12 @@ function addLimit(query) {
 
 // Add common prefix to query
 const handleAddPrefix = (prefix, uri, query, setQuery, setLineCount) => {
-    const updatedQuery = addPrefix(prefix, uri, query);
-    setQuery(updatedQuery);
-    setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
+  const updatedQuery = addPrefix(prefix, uri, query);
+  setQuery(updatedQuery);
+  setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
 };
 
-   // Format the query
+// Format the query
 const handleFormatQuery = (query, setQuery, setLineCount) => {
   const formatted = formatSparqlQuery(query);
   setQuery(formatted);
