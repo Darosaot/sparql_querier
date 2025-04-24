@@ -1,72 +1,11 @@
 // src/components/SparqlInput.js
 import React, { useState, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { Form, Button, Card, Alert, Row, Col, Tooltip, OverlayTrigger, Spinner } from 'react-bootstrap';
+import { Form, Button, Card, Alert, Row, Col, Tooltip, OverlayTrigger } from 'react-bootstrap';
 import queryTemplates from '../data/queryTemplates';
 
-// Function to validate basic SPARQL syntax
-const validateSparqlQuery = (query) => {
-  if (!query || query.trim() === '') {
-    return { valid: false, error: 'Query cannot be empty' };
-  }
-
-  const warnings = [];
-  const upperQuery = query.toUpperCase();
-  
-  // Check query type and required clause
-  if (upperQuery.includes('SELECT')) {
-    if (!upperQuery.includes('WHERE')) {
-      return { valid: false, error: 'SELECT query must include a WHERE clause' };
-    }
-  } else if (upperQuery.includes('CONSTRUCT')) {
-    if (!upperQuery.includes('WHERE')) {
-      return { valid: false, error: 'CONSTRUCT query must include a WHERE clause' };
-    }
-  } else if (upperQuery.includes('ASK')) {
-    if (!upperQuery.includes('WHERE')) {
-      return { valid: false, error: 'ASK query must include a WHERE clause' };
-    }
-  } else if (upperQuery.includes('DESCRIBE')) {
-    // DESCRIBE can be used without WHERE but it's less common
-    if (!upperQuery.includes('WHERE')) {
-      warnings.push('DESCRIBE query without WHERE clause might return large amounts of data');
-    }
-  } else {
-    return { valid: false, error: 'Query must start with SELECT, CONSTRUCT, ASK, or DESCRIBE' };
-  }
-  
-  // Check for balanced braces
-  const openBraces = (query.match(/\{/g) || []).length;
-  const closeBraces = (query.match(/\}/g) || []).length;
-  
-  if(openBraces !== closeBraces){
-    return { 
-      valid: false, 
-      error: `Unbalanced braces: ${openBraces} opening and ${closeBraces} closing braces` 
-    };
-  }
-  
-  // Check for unclosed quotes
-  const doubleQuotes = (query.match(/"/g) || []).length;
-  if (doubleQuotes % 2 !== 0) {
-    return { valid: false, error: 'Unclosed double quotes in query' };
-  }
-  
-  const singleQuotes = (query.match(/'/g) || []).length;
-  if (singleQuotes % 2 !== 0) {
-    return { valid: false, error: 'Unclosed single quotes in query' };
-  }
-  
-  // Check for performance warnings
-  if (!upperQuery.includes('LIMIT')) {
-    warnings.push('Query does not have a LIMIT clause, which might return large result sets');
-  }
-  
-  return { valid: true, warnings };
-};
-
 // Function to format SPARQL query (basic formatting)
-function formatSparqlQuery(query) {
+export function formatSparqlQuery(query) {
   if (!query) return '';
   
   let formatted = query;
@@ -126,6 +65,116 @@ function formatSparqlQuery(query) {
   return formattedLines.join('\n');
 };
 
+// Add common prefix to query
+export function addPrefix(prefix, uri, queryValue) {
+  // Check if the prefix is already in the query
+  if (!queryValue.includes(`PREFIX ${prefix}:`)) {
+    const prefixDeclaration = `PREFIX ${prefix}: <${uri}>\n`;
+    
+        // Add at the beginning or after other prefixes
+        const lines = queryValue.split('\n');
+    let lastPrefixIndex = -1;
+    
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].trim().toUpperCase().startsWith('PREFIX')) {
+        lastPrefixIndex = i;
+      }
+    }
+    
+    if (lastPrefixIndex >= 0) {
+            // Insert after the last prefix
+            lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
+    } else {
+            // Insert at the beginning
+      lines.unshift(prefixDeclaration);
+    }
+    
+    const updatedQuery = lines.join('\n');
+    return updatedQuery
+  }
+  return query;
+};
+
+// Add LIMIT if missing
+export function addLimit(query) {
+  if (!query.toUpperCase().includes('LIMIT')) {
+    let updatedQuery = query.trim();
+    updatedQuery += '\nLIMIT 100';
+    return updatedQuery;
+  }
+  return query;
+}
+// Function to validate basic SPARQL syntax
+export const validateSparqlQuery = (query) => {
+  if (!query || query.trim() === '') {
+    return { valid: false, error: 'Query cannot be empty' };
+  }
+
+  const warnings = [];
+  const upperQuery = query.toUpperCase();
+  
+  // Check query type and required clause
+  if (upperQuery.includes('SELECT')) {
+    if (!upperQuery.includes('WHERE')) {
+      return { valid: false, error: 'SELECT query must include a WHERE clause' };
+    }
+  } else if (upperQuery.includes('CONSTRUCT')) {
+    if (!upperQuery.includes('WHERE')) {
+      return { valid: false, error: 'CONSTRUCT query must include a WHERE clause' };
+    }
+  } else if (upperQuery.includes('ASK')) {
+    if (!upperQuery.includes('WHERE')) {
+      return { valid: false, error: 'ASK query must include a WHERE clause' };
+    }
+  } else if (upperQuery.includes('DESCRIBE')) {
+    // DESCRIBE can be used without WHERE but it's less common
+    if (!upperQuery.includes('WHERE')) {
+      warnings.push('DESCRIBE query without WHERE clause might return large amounts of data');
+    }
+  } else {
+    return { valid: false, error: 'Query must start with SELECT, CONSTRUCT, ASK, or DESCRIBE' };
+  }
+  
+  // Check for balanced braces
+  const openBraces = (query.match(/\{/g) || []).length;
+  const closeBraces = (query.match(/\}/g) || []).length;
+  
+  if(openBraces !== closeBraces){
+    return { 
+      valid: false, 
+      error: `Unbalanced braces: ${openBraces} opening and ${closeBraces} closing braces` 
+    };
+  }
+  
+  // Check for unclosed quotes
+  const doubleQuotes = (query.match(/"/g) || []).length;
+  if (doubleQuotes % 2 !== 0) {
+    return { valid: false, error: 'Unclosed double quotes in query' };
+  }
+  
+  const singleQuotes = (query.match(/'/g) || []).length;
+  if (singleQuotes % 2 !== 0) {
+    return { valid: false, error: 'Unclosed single quotes in query' };
+  }
+  
+  // Check for performance warnings
+  if (!upperQuery.includes('LIMIT')) {
+    warnings.push('Query does not have a LIMIT clause, which might return large result sets');
+  }
+  
+  return { valid: true, warnings };
+};
+    
+// Add a basic query template if empty
+export function addBasicStructure(query) {
+  if (!query.trim()) {
+    const basicQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n\nSELECT ?subject ?predicate ?object\nWHERE {\n  ?subject ?predicate ?object .\n  \n  # Add your conditions here\n  \n} LIMIT 100`;
+    
+    return basicQuery;
+    }
+  return query
+}
+
 
 // List of common SPARQL prefixes with tooltips
 const commonPrefixes = [
@@ -159,55 +208,6 @@ const LineNumbers = ({ lines }) => {
   );
 };
 
-// Add common prefix to query
-function addPrefix(prefix, uri, queryValue) {
-  // Check if the prefix is already in the query
-  if (!queryValue.includes(`PREFIX ${prefix}:`)) {
-    const prefixDeclaration = `PREFIX ${prefix}: <${uri}>\n`;
-    
-        // Add at the beginning or after other prefixes
-        const lines = queryValue.split('\n');
-    let lastPrefixIndex = -1;
-    
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].trim().toUpperCase().startsWith('PREFIX')) {
-        lastPrefixIndex = i;
-      }
-    }
-    
-    if (lastPrefixIndex >= 0) {
-            // Insert after the last prefix
-            lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
-    } else {
-            // Insert at the beginning
-      lines.unshift(prefixDeclaration);
-    }
-    
-    const updatedQuery = lines.join('\n');
-    return updatedQuery
-  }
-  return query;
-};
-
-// Add a basic query template if empty
-function addBasicStructure(query) {
-  if (!query.trim()) {
-    const basicQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n\nSELECT ?subject ?predicate ?object\nWHERE {\n  ?subject ?predicate ?object .\n  \n  # Add your conditions here\n  \n} LIMIT 100`;
-    
-    return basicQuery;
-    }
-  return query
-}
-
-// Add LIMIT if missing
-function addLimit(query) {
-  if (!query.toUpperCase().includes('LIMIT')) {
-    let updatedQuery = query.trim();
-    updatedQuery += '\nLIMIT 100';
-    return updatedQuery;
-  }
-  return query;
-}
 
 // Add common prefix to query
 const handleAddPrefix = (prefix, uri, query, setQuery, setLineCount) => {
@@ -225,7 +225,7 @@ const handleFormatQuery = (query, setQuery, setLineCount) => {
   setLineCount((formatted.match(/\n/g) || []).length + 1);
 };
 
-  const handleAddBasicStructure = (query, setQuery, setLineCount) => {
+const handleAddBasicStructure = (query, setQuery, setLineCount) => {
         const updatedQuery = addBasicStructure(query);
         setQuery(updatedQuery);
         setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
@@ -455,5 +455,6 @@ SparqlInput.propTypes = {
     
 };
 
-export { formatSparqlQuery, validateSparqlQuery, addPrefix, addLimit, addBasicStructure};
+
+export default SparqlInput;
 export default SparqlInput;
