@@ -171,7 +171,6 @@ function App() {
   };
   
   const Home = () => (
-    <ErrorBoundary><div className="App">
         <Header />
         <Container fluid className="mb-5">
           <Tab.Container activeKey={activeTab} onSelect={(key) => setActiveTab(key)}>
@@ -261,9 +260,11 @@ function App() {
               </Col>
             </Row>
           </Container>
-        </footer>
-      </div></ErrorBoundary>
-      </div>
+          {/* Footer */}
+          <footer className="app-footer"></footer>
+
+    </div>
+    
   );
 
   return (
@@ -271,6 +272,8 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/shared/:shareToken" element={<SharedDashboard />} />
     </Routes>
+        </ErrorBoundary>
+
   )
 }
 
