@@ -753,8 +753,8 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
           <p>
             {shareMode === 'view' && 'Anyone with this link can view the dashboard:'}
             {shareMode === 'edit' && 'Anyone with this link can view and edit the dashboard:'} 
-            {shareMode === 'embed' && 'Use this code to embed the dashboard in your website:'} 
-          </p>
+            {shareMode === 'embed' && 'Use this code to embed the dashboard in your website:&quot;'} 
+          </p> 
           
           {shareMode === 'embed' ? (  
             <Form.Control

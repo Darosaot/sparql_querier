@@ -152,7 +152,7 @@ const endpointSuggestions = [
 const LineNumbers = ({ lines }) => {
   return (
     <div className="line-numbers">
-      {Array.from({ length: lines }).map((_, i) => (
+      {Array.from({ length: lines || 0 }).map((_, i) => (
         <div key={i} className="line-number">{i + 1}</div>
       ))}
     </div>
@@ -180,7 +180,7 @@ function addPrefix(prefix, uri, queryValue) {
             lines.splice(lastPrefixIndex + 1, 0, prefixDeclaration);
     } else {
             // Insert at the beginning
-            lines.unshift(prefixDeclaration);
+      lines.unshift(prefixDeclaration);
     }
     
     const updatedQuery = lines.join('\n');
@@ -196,8 +196,8 @@ function addBasicStructure(query) {
     
     return basicQuery;
     }
-    return query
-};
+  return query
+}
 
 // Add LIMIT if missing
 function addLimit(query) {
@@ -206,8 +206,8 @@ function addLimit(query) {
     updatedQuery += '\nLIMIT 100';
     return updatedQuery;
   }
-  return query
-};
+  return query;
+}
 
 // Add common prefix to query
 const handleAddPrefix = (prefix, uri, query, setQuery, setLineCount) => {
@@ -240,6 +240,7 @@ const SparqlInput = ({
     isLoading
 }) => {
   const [validationResult, setValidationResult] = useState({ valid: true, warnings: [] });
+  
     
   const [lineCount, setLineCount] = useState(1);
   const [queryName, setQueryName] = useState('');
@@ -292,21 +293,10 @@ const SparqlInput = ({
   };
 
   const handleAddLimit = () => {
+    const query = query;
     const updatedQuery = addLimit(query);
     setQuery(updatedQuery);
     setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
-  }
-
-  // Add a basic query template if empty
-  const addBasicStructure = () => {
-    if (!query.trim()) {
-      const basicQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n\nSELECT ?subject ?predicate ?object\nWHERE {\n  ?subject ?predicate ?object .\n  \n  # Add your conditions here\n  \n} LIMIT 100`;
-
-      setQuery(basicQuery);  
-      setLineCount((basicQuery.match(/\n/g) || []).length + 1);
-    }
-  };
-  
   return (
     <Card>
       <Card.Header as="h5">SPARQL Editor</Card.Header>
@@ -403,7 +393,7 @@ const SparqlInput = ({
                 <Button 
                   variant="outline-secondary" 
                   size="sm"
-                  onClick={() => addBasicStructure(query)}
+                  onClick={() => handleAddBasicStructure(query, setQuery, setLineCount)}
                   className="me-2"
                 >
                   Add Basic Structure
@@ -414,7 +404,7 @@ const SparqlInput = ({
                   onClick={() => handleAddLimit()}
                 >
                   Add LIMIT
-                </Button>
+                </Button>    
               </Col>
             </Row>
             
@@ -461,11 +451,9 @@ SparqlInput.propTypes = {
     setQuery: PropTypes.func,
     onExecute: PropTypes.func,
     isLoading: PropTypes.bool,
-    lines: PropTypes.any,
+    lines: PropTypes.number,
     
 };
 
-
-
-export { formatSparqlQuery, validateSparqlQuery, addPrefix, addLimit, addBasicStructure };
+export { formatSparqlQuery, validateSparqlQuery, addPrefix, addLimit, addBasicStructure};
 export default SparqlInput;
