@@ -264,9 +264,7 @@ function App() {
               </Col>
             </Row>
           </Container>
-          {/* Footer */}
-          <footer className="app-footer">
-          </footer>
+          
     </div>
     </div>
     
