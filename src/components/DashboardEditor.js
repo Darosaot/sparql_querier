@@ -756,7 +756,7 @@ const DashboardEditor = ({ dashboardId, onBack }) => {
             {shareMode === 'embed' && 'Use this code to embed the dashboard in your website:'} 
           </p>
           
-          {shareMode === 'embed' ? (
+          {shareMode === 'embed' ? (  
             <Form.Control
               as="textarea"
               rows={3}

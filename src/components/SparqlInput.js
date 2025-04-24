@@ -162,11 +162,11 @@ const LineNumbers = ({ lines }) => {
 // Add common prefix to query
 function addPrefix(prefix, uri, queryValue) {
   // Check if the prefix is already in the query
-  if (!query.includes(`PREFIX ${prefix}:`)) {
+  if (!queryValue.includes(`PREFIX ${prefix}:`)) {
     const prefixDeclaration = `PREFIX ${prefix}: <${uri}>\n`;
     
         // Add at the beginning or after other prefixes
-        const lines = query.split('\n');
+        const lines = queryValue.split('\n');
     let lastPrefixIndex = -1;
     
     for (let i = 0; i < lines.length; i++) {
@@ -184,7 +184,7 @@ function addPrefix(prefix, uri, queryValue) {
     }
     
     const updatedQuery = lines.join('\n');
-        return updatedQuery
+    return updatedQuery
   }
   return query;
 };
@@ -196,7 +196,7 @@ function addBasicStructure(query) {
     
     return basicQuery;
     }
-    return query;
+    return query
 };
 
 // Add LIMIT if missing
@@ -212,6 +212,7 @@ function addLimit(query) {
 // Add common prefix to query
 const handleAddPrefix = (prefix, uri, query, setQuery, setLineCount) => {
   const updatedQuery = addPrefix(prefix, uri, query);
+
   setQuery(updatedQuery);
   setLineCount((updatedQuery.match(/\n/g) || []).length + 1);
 };
@@ -262,7 +263,7 @@ const SparqlInput = ({
   // Handle template selection
   const handleTemplateChange = (e) => {
     const selectedTemplate = e.target.value;
-    const templateQuery = queryTemplates[selectedTemplate] || '';
+    const templateQuery = queryTemplates[selectedTemplate] ? queryTemplates[selectedTemplate] : '';
     setQuery(templateQuery);
     
     // Update line count
@@ -300,7 +301,7 @@ const SparqlInput = ({
   const addBasicStructure = () => {
     if (!query.trim()) {
       const basicQuery = `PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n\nSELECT ?subject ?predicate ?object\nWHERE {\n  ?subject ?predicate ?object .\n  \n  # Add your conditions here\n  \n} LIMIT 100`;
-      
+
       setQuery(basicQuery);  
       setLineCount((basicQuery.match(/\n/g) || []).length + 1);
     }
@@ -461,8 +462,7 @@ SparqlInput.propTypes = {
     onExecute: PropTypes.func,
     isLoading: PropTypes.bool,
     lines: PropTypes.any,
-    'query.trim': PropTypes.any
-
+    
 };
 
 

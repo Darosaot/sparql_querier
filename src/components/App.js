@@ -26,6 +26,7 @@ function App() {
   const [sparqlEndpoint, setSparqlEndpoint] = useState('');
   const [query, setQuery] = useState('');
   const [queryResults, setQueryResults] = useState(null);
+  const [queryName, setQueryName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const [error, setError] = useState(null);
@@ -77,10 +78,11 @@ function App() {
         // Save the query to history
         const timestamp = new Date().getTime();
         
+        const queryNameAux = getQueryName(query);
         // Create a new history entry
         const historyEntry = {
           id: timestamp,
-          name: queryName,
+          name: queryNameAux,
           query: query,
           endpoint: sparqlEndpoint,
           resultCount: result.data.length,
@@ -117,7 +119,7 @@ function App() {
       return extractedText.length > 30 
         ? extractedText.substring(0, 30) + '...' 
         : extractedText;
-    }
+      }
     
     // If no pattern is found, return a generic name with timestamp
     return `Query ${new Date().toLocaleTimeString()}`;
@@ -128,7 +130,7 @@ function App() {
   const handleLoadQuery = (historyItem) => {
     setQuery(historyItem.query);
     setSparqlEndpoint(historyItem.endpoint);
-    setActiveTab('sparql-query');
+      setActiveTab('sparql-query');
   };
   
   // Handle deleting a query from history
@@ -250,7 +252,7 @@ function App() {
       <Route path="/shared/:shareToken" element={<SharedDashboard />} />
     </Routes>
   )
-};
+}
 
 
 export default App;
