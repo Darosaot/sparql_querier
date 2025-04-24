@@ -212,10 +212,6 @@ const Visualization = ({ data, columns}) => {
     }
   };
 
-
-
-  };
-
   // Group data by the X-axis and apply the selected operation to Y-axis values
   const groupDataByOperation = () => {
     if (!xAxis || !yAxis) {
