@@ -90,14 +90,15 @@ function formatSparqlQuery(query) {
   
   lines.forEach(line => {
     let trimmedLine = line.trim();
-    if (!trimmedLine) {
-      formattedLines.push('');
+    if (!trimmedLine) {      
       return;
     }
+    
     if (trimmedLine.includes('}')) {
       indentLevel = Math.max(0, indentLevel - 1);
     }
-    if (trimmedLine.length > 0) {
+
+    
       formattedLines.push('  '.repeat(indentLevel) + trimmedLine);
       if (trimmedLine.includes('{')) {
         indentLevel++;
@@ -105,6 +106,7 @@ function formatSparqlQuery(query) {
     }
   });
   
+
   return formattedLines.join('\n');
 };
 
