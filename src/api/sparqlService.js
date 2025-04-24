@@ -31,6 +31,8 @@ export const executeQuery = async (endpoint, query, options = {}) => {
   console.log(`Query complexity: ${queryComplexity ? 'Complex' : 'Standard'}, using timeout: ${timeout/1000}s`);
   
   try {
+      // Create a cancellation token source
+    const source = axios.CancelToken.source();
     // First try direct request to the endpoint (some SPARQL endpoints support CORS)
     console.log('Trying direct request to the SPARQL endpoint');
     
@@ -46,7 +48,8 @@ export const executeQuery = async (endpoint, query, options = {}) => {
           'User-Agent': 'SPARQLAnalyticsApp/1.0'
         },
         timeout: timeout
-      }
+      ,
+        cancelToken: source.token
     );
     
     const endTime = performance.now();
@@ -118,7 +121,10 @@ export const executeQuery = async (endpoint, query, options = {}) => {
         query: query
       }, {
         timeout: timeout // Same timeout for proxy
-      });
+          ,
+          cancelToken: source.token // Pass the cancellation token to the proxy request
+      }
+        );
       
       const endTime = performance.now();
       const executionTime = (endTime - startTime) / 1000;

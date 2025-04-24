@@ -1,6 +1,6 @@
 // src/components/App.js
 import React, { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useRouteError } from 'react-router-dom';
 import { Container, Row, Col, Nav, Tab, Alert } from 'react-bootstrap';
 import SparqlInput from './SparqlInput';
 import ErrorDisplay from './ErrorDisplay';
@@ -19,6 +19,25 @@ import ResultsTable from './ResultsTable';
 import SuccessDisplay from './SuccessDisplay';
 import SharedDashboard from './SharedDashboard';
 
+
+// Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div>Something went wrong.</div>;
+    }
+    return this.props.children;
+  }
+}
 
 // Main App component
 function App() {
@@ -152,7 +171,7 @@ function App() {
   };
   
   const Home = () => (
-    <div className="App">
+    <ErrorBoundary><div className="App">
         <Header />
         <Container fluid className="mb-5">
           <Tab.Container activeKey={activeTab} onSelect={(key) => setActiveTab(key)}>
@@ -231,7 +250,7 @@ function App() {
               </Col>
             </Row>
           </Tab.Container>
-        </Container>
+        </Container> 
         {/* Footer */}
         <footer className="app-footer">
           <Container>
@@ -243,6 +262,7 @@ function App() {
             </Row>
           </Container>
         </footer>
+      </div></ErrorBoundary>
       </div>
   );
 

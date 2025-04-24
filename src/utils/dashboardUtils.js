@@ -63,7 +63,7 @@ const sanitizeDashboard = (dashboard) => {
       sanitized.panels = dashboard.panels
         .filter(panel => panel && typeof panel === 'object')
         .map((panel, index) => {
-          // Ensure position is valid and contains numerical values
+          // Ensure position is valid and contains numerical values, or use defaults
           const defaultPosition = { x: 0, y: index * 4, w: 12, h: 4 };
           if (panel.position &&
               typeof panel.position === 'object' &&
@@ -72,20 +72,23 @@ const sanitizeDashboard = (dashboard) => {
               panel.position.w !== undefined &&
               panel.position.h !== undefined){
 
-            // Convert position values to numbers
+            // Convert position values to numbers or use default values
             const position = {
               x: Number(panel.position.x || 0),
               y: Number(panel.position.y || index * 4),
               w: Number(panel.position.w || 12),
               h: Number(panel.position.h || 4)
             };
+            
+            // Update the panel's position with the sanitized values
+            panel.position = position;
           }
 
           return {
             ...panel,
             id: panel.id || `panel-${uuidv4()}`,
             title: panel.title || 'Unnamed Panel',
-            type: panel.type || 'table',
+            type: panel.type || 'table',          
             position: panel.position,
             query: panel.query || {},
             visualization: panel.visualization || {}
