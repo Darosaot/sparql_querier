@@ -457,4 +457,3 @@ SparqlInput.propTypes = {
 
 
 export default SparqlInput;
-export default SparqlInput;
