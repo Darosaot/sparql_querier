@@ -171,6 +171,7 @@ function App() {
   };
   
   const Home = () => (
+    <div>
         <Header />
         <Container fluid className="mb-5">
           <Tab.Container activeKey={activeTab} onSelect={(key) => setActiveTab(key)}>
@@ -264,8 +265,9 @@ function App() {
             </Row>
           </Container>
           {/* Footer */}
-          <footer className="app-footer"></footer>
-
+          <footer className="app-footer">
+          </footer>
+    </div>
     </div>
     
   );
