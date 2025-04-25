@@ -267,8 +267,7 @@ function App() {
           </Container>
          
         </footer>
-    </div> {/* Closing tag added here */}
-    
+        </div>
   );
 
   return (
