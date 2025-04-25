@@ -21,11 +21,13 @@ const TIMEOUT_SETTINGS = {
  * @returns {Promise} - Promise resolving to the query results
  */
 export const executeQuery = async (endpoint, query, options = {}) => {
+  // Create a cancellation token source
+  const source = axios.CancelToken.source();
   const startTime = performance.now();
   
   // Determine appropriate timeout based on query complexity
   const queryComplexity = isComplexQuery(query);
-  const timeout = options.timeout || 
+  const timeout = options.timeout ||
                  (queryComplexity ? TIMEOUT_SETTINGS.COMPLEX : TIMEOUT_SETTINGS.DEFAULT);
   
   console.log(`Query complexity: ${queryComplexity ? 'Complex' : 'Standard'}, using timeout: ${timeout/1000}s`);
@@ -33,8 +35,6 @@ export const executeQuery = async (endpoint, query, options = {}) => {
   try {
     // Create a cancellation token source
     const source = axios.CancelToken.source();
-    // First try direct request to the endpoint (some SPARQL endpoints support CORS)
-    console.log('Trying direct request to the SPARQL endpoint');
     
     // Use a longer timeout for complex queries
     const response = await axios.post(endpoint, 
@@ -50,6 +50,9 @@ export const executeQuery = async (endpoint, query, options = {}) => {
         cancelToken: source.token
       }
     );
+
+    // First try direct request to the endpoint (some SPARQL endpoints support CORS)
+    console.log('Trying direct request to the SPARQL endpoint');
     
     const endTime = performance.now();
     const executionTime = (endTime - startTime) / 1000;
@@ -120,8 +123,7 @@ export const executeQuery = async (endpoint, query, options = {}) => {
         endpoint: endpoint,
         query: query
       }, {
-        timeout: timeout, // Same timeout for proxy
-        cancelToken: source.token
+        timeout: timeout,
       });
       
       const endTime = performance.now();
@@ -214,6 +216,7 @@ export const executeQuery = async (endpoint, query, options = {}) => {
           type: 'request_setup'
         };
       }
+      console.log("Error details: ", errorDetails);
       
       const proxyErrorMessage = proxyError.response 
         ? `Proxy error (${proxyError.response.status}): ${proxyError.response.data?.error || proxyError.message}`
