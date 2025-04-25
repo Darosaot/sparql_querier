@@ -1,8 +1,7 @@
 // src/components/App.js
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useRouteError } from 'react-router-dom';
-
-import { Container, Row, Col, Nav, Tab, Alert } from 'react-bootstrap';
+import { Routes, Route } from 'react-router-dom';
+import { Container, Row, Col, Nav, Tab } from 'react-bootstrap';
 import SparqlInput from './SparqlInput';
 import ErrorDisplay from './ErrorDisplay';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -129,12 +128,12 @@ function App() {
   
     const getQueryName = (queryText) => {
     // Look for SELECT or CONSTRUCT keyword
-   
     const selectMatch = queryText.match(/SELECT\s+.+?\s+WHERE/i);
       if (selectMatch) {
       // Extract and return up to 30 characters after SELECT
+
       const extractedText = selectMatch[0]
-        .replace(/SELECT\s+/i, '')
+        .replace(/SELECTs+/i, '')
         .replace(/\s+WHERE$/, '')
         .trim();
       return extractedText.length > 30 
@@ -278,9 +277,7 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/shared/:shareToken" element={<SharedDashboard />} />
     </Routes>
-    </ErrorBoundary> 
-  
- 
+    </ErrorBoundary>
   )
 }
 
