@@ -1,5 +1,1 @@
-export function assert(condition, message) {
-  if (!condition) {
-    throw new Error(message);
-  }
-}
+export function assert(condition, message) {\n  expect(condition).toBeTruthy();\n  if (!condition) {\n    console.error(message)\n  }\n}

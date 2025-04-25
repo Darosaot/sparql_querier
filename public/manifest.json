@@ -1,0 +1,6 @@
+{
+  "name": "SPARQL Querier",
+  "short_name": "SPARQL",
+  "start_url": ".",
+  "display": "standalone"
+}

@@ -45,8 +45,7 @@ export const executeQuery = async (endpoint, query, options = {}) => {
         headers: {
           'Accept': 'application/sparql-results+json',
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'SPARQLAnalyticsApp/1.0'
-        },
+         },
         timeout: timeout,
         cancelToken: source.token
       }

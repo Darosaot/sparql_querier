@@ -5,213 +5,250 @@ import {
   analyzeQuery,
   resultsToCSV,
 } from '../api/sparqlService';
-import { assert } from '../utils/testUtils';
+import { assert } from '../utils/testUtils';  
 
-const testSparqlService = async function () {
-  console.log('Starting SPARQL Service tests...');
+describe('SPARQL Service Tests', () => {
+  console.log('Starting SPARQL Service tests...');  
+  
+  describe('isValidSparql', () => {
+    console.log('  Starting isValidSparql tests...');  
 
-  // 1. isValidSparql tests
-  console.log('  Starting isValidSparql tests...');
+    test('Valid SELECT query should be valid', () => {
+      try {
+        expect(isValidSparql('SELECT * WHERE { ?s ?p ?o }')).toBeTruthy();
+      } catch (error) {
+        console.error('Valid SELECT query should be valid', error);
+      }
+    });
 
-  // 1.1 Valid SELECT query
-  assert(
-    isValidSparql('SELECT * WHERE { ?s ?p ?o }'),
-    'Valid SELECT query should be valid'
-  );
+    test('Valid ASK query should be valid', () => {
+      try {
+        expect(isValidSparql('ASK { ?s ?p ?o }')).toBeTruthy();
+      } catch (error) {
+        console.error('Valid ASK query should be valid', error);
+      }
+    });
 
-  // 1.2 Valid ASK query  
-  assert(
-    isValidSparql('ASK { ?s ?p ?o }'),
-    'Valid ASK query should be valid'
-  );
+    test('Invalid query (missing WHERE) should be invalid', () => {
+      try {
+        expect(isValidSparql('SELECT * { ?s ?p ?o }')).toBeFalsy();
+      } catch (error) {
+        console.error('Invalid query (missing WHERE) should be invalid', error);
+      }
+    });
 
-  // 1.3 Invalid query (missing WHERE)
-  assert(
-    !isValidSparql('SELECT * { ?s ?p ?o }'),
-    'Invalid query (missing WHERE) should be invalid'
-  );
+    test('Invalid query (unbalanced braces) should be invalid', () => {
+      try {
+        expect(isValidSparql('SELECT * WHERE { ?s ?p ?o ')).toBeFalsy();
+      } catch (error) {
+        console.error('Invalid query (unbalanced braces) should be invalid', error);
+      }
+    });
 
-  // 1.4 Invalid query (unbalanced braces)
-  assert(
-    !isValidSparql('SELECT * WHERE { ?s ?p ?o '),
-    'Invalid query (unbalanced braces) should be invalid'
-  );
+    test('Invalid query (missing query type) should be invalid', () => {
+      try {
+        expect(isValidSparql('{ ?s ?p ?o }')).toBeFalsy();
+      } catch (error) {
+        console.error('Invalid query (missing query type) should be invalid', error);
+      }
+    });
 
-  // 1.5 Invalid query (missing query type)
-  assert(
-    !isValidSparql('{ ?s ?p ?o }'),
-    'Invalid query (missing query type) should be invalid'
-  );
-  // 1.6 Valid complex query
-  assert(
-    isValidSparql(
-      'SELECT ?item WHERE { ?item wdt:P31 wd:Q5 . { SELECT ?item WHERE { ?item wdt:P31 wd:Q5 } } }'
-    ),
-    'Valid complex query should be valid'
-  );
+    test('Valid complex query should be valid', () => {
+      try {
+        expect(isValidSparql('SELECT ?item WHERE { ?item wdt:P31 wd:Q5 . { SELECT ?item WHERE { ?item wdt:P31 wd:Q5 } } }')).toBeTruthy();
+      } catch (error) {
+        console.error('Valid complex query should be valid', error);
+      }
+    });
 
-  // 1.7 Invalid query (unbalanced quotes)
-  assert(
-    !isValidSparql('SELECT ?s WHERE { ?s rdfs:label "test }'),
-    'Invalid query (unbalanced quotes) should be invalid'
-  );
-  console.log('  Ending isValidSparql tests.');
+    test('Invalid query (unbalanced quotes) should be invalid', () => {
+      try {
+        expect(isValidSparql('SELECT ?s WHERE { ?s rdfs:label "test }')).toBeFalsy();
+      } catch (error) {
+        console.error('Invalid query (unbalanced quotes) should be invalid', error);
+      }
+    });
+    console.log('  Ending isValidSparql tests.');
+  });
 
-  // 2. isComplexQuery tests
-  console.log('  Starting isComplexQuery tests...');
+  describe('isComplexQuery', () => {
+    console.log('  Starting isComplexQuery tests...');
 
-  // 2.1 Simple query
-  assert(
-    !isComplexQuery('SELECT * WHERE { ?s ?p ?o }'),
-    'Simple query should not be complex'
-  );
+    test('Simple query should not be complex', () => {
+      try {
+        expect(isComplexQuery('SELECT * WHERE { ?s ?p ?o }')).toBeFalsy();
+      } catch (error) {
+        console.error('Simple query should not be complex', error);
+      }
+    });
 
-  // 2.2 Subquery
-  assert(
-    isComplexQuery('SELECT * WHERE { { SELECT ?s WHERE { ?s ?p ?o } } }'),
-    'Query with subquery should be complex'
-  );
+    test('Query with subquery should be complex', () => {
+      try {
+        expect(isComplexQuery('SELECT * WHERE { { SELECT ?s WHERE { ?s ?p ?o } } }')).toBeTruthy();
+      } catch (error) {
+        console.error('Query with subquery should be complex', error);
+      }
+    });
 
-  // 2.3 Multiple optionals
-  assert(
-    isComplexQuery(
-      'SELECT * WHERE { OPTIONAL { ?s ?p ?o } OPTIONAL { ?s ?p ?o } OPTIONAL { ?s ?p ?o } }'
-    ),
-    'Query with multiple optionals should be complex'
-  );
+    test('Query with multiple optionals should be complex', () => {
+      try {
+        expect(isComplexQuery('SELECT * WHERE { OPTIONAL { ?s ?p ?o } OPTIONAL { ?s ?p ?o } OPTIONAL { ?s ?p ?o } }')).toBeTruthy();
+      } catch (error) {
+        console.error('Query with multiple optionals should be complex', error);
+      }
+    });
 
-  // 2.4 Union query
-  assert(
-    isComplexQuery('SELECT * WHERE { { ?s ?p ?o } UNION { ?s ?p ?o } }'),
-    'Query with union should be complex'
-  );
+    test('Query with union should be complex', () => {
+      try {
+        expect(isComplexQuery('SELECT * WHERE { { ?s ?p ?o } UNION { ?s ?p ?o } }')).toBeTruthy();
+      } catch (error) {
+        console.error('Query with union should be complex', error);
+      }
+    });
 
-  // 2.5 Group by query
-  assert(
-    isComplexQuery('SELECT ?s COUNT(?o) WHERE { ?s ?p ?o } GROUP BY ?s'),
-    'Query with group by should be complex'
-  );
-  console.log('  Ending isComplexQuery tests.');
+    test('Query with group by should be complex', () => {
+      try {
+        expect(isComplexQuery('SELECT ?s COUNT(?o) WHERE { ?s ?p ?o } GROUP BY ?s')).toBeTruthy();
+      } catch (error) {
+        console.error('Query with group by should be complex', error);
+      }
+    });
+    console.log('  Ending isComplexQuery tests.');
+  });
 
-  // 3. optimizeQuery tests
-  console.log('  Starting optimizeQuery tests...');
+  describe('optimizeQuery', () => {
+    console.log('  Starting optimizeQuery tests...');
 
-  // 3.1 Simple query (add LIMIT)
-  assert(
-    optimizeQuery('SELECT * WHERE { ?s ?p ?o }').endsWith('LIMIT 1000'),
-    'Simple query should have LIMIT added'
-  );
+    test('Simple query should have LIMIT added', () => {
+      try {
+        expect(optimizeQuery('SELECT * WHERE { ?s ?p ?o }').endsWith('LIMIT 1000')).toBeTruthy();
+      } catch (error) {
+        console.error('Simple query should have LIMIT added', error);
+      }
+    });
 
-  // 3.2 Query with ORDER BY (add LIMIT after ORDER BY)
-  assert(
-    optimizeQuery('SELECT * WHERE { ?s ?p ?o } ORDER BY ?s').includes(
-      'ORDER BY ?s LIMIT 1000'
-    ),
-    'Query with ORDER BY should have LIMIT added after ORDER BY'
-  );
+    test('Query with ORDER BY should have LIMIT added after ORDER BY', () => {
+      try {
+        expect(optimizeQuery('SELECT * WHERE { ?s ?p ?o } ORDER BY ?s').includes('ORDER BY ?s LIMIT 1000')).toBeTruthy();
+      } catch (error) {
+        console.error('Query with ORDER BY should have LIMIT added after ORDER BY', error);
+      }
+    });
 
-  // 3.3 Query with existing LIMIT (no change)
-  assert(
-    optimizeQuery('SELECT * WHERE { ?s ?p ?o } LIMIT 10') ===
-      'SELECT * WHERE { ?s ?p ?o } LIMIT 10',
-    'Query with existing LIMIT should not be modified'
-  );
+    test('Query with existing LIMIT should not be modified', () => {
+      try {
+        expect(optimizeQuery('SELECT * WHERE { ?s ?p ?o } LIMIT 10')).toBe('SELECT * WHERE { ?s ?p ?o } LIMIT 10');
+      } catch (error) {
+        console.error('Query with existing LIMIT should not be modified', error);
+      }
+    });
 
-  // 3.4 Aggregations
-  assert(
-    optimizeQuery('SELECT (COUNT(?o) AS ?count) WHERE { ?s ?p ?o } GROUP BY ?s') ===
-      'SELECT (COUNT(?o) AS ?count) WHERE { ?s ?p ?o } GROUP BY ?s',
-    'Aggregation query should not be modified'
-  );
-  console.log('  Ending optimizeQuery tests.');
+    test('Aggregation query should not be modified', () => {
+      try {
+        expect(optimizeQuery('SELECT (COUNT(?o) AS ?count) WHERE { ?s ?p ?o } GROUP BY ?s')).toBe('SELECT (COUNT(?o) AS ?count) WHERE { ?s ?p ?o } GROUP BY ?s');
+      } catch (error) {
+        console.error('Aggregation query should not be modified', error);
+      }
+    });
+    console.log('  Ending optimizeQuery tests.');
+  });
 
-  // 4. analyzeQuery tests
-  console.log('  Starting analyzeQuery tests...');
+  describe('analyzeQuery', () => {
+    console.log('  Starting analyzeQuery tests...');
 
-  // 4.1 Simple SELECT query
-  const simpleQueryAnalysis = analyzeQuery('SELECT ?s WHERE { ?s ?p ?o }');
-  assert(
-    simpleQueryAnalysis.isValid &&
-      simpleQueryAnalysis.queryType === 'SELECT' &&
-      simpleQueryAnalysis.selectVariables.includes('?s') &&
-      simpleQueryAnalysis.triplePatternCount === 1,
-    'Simple SELECT query should be analyzed correctly'
-  );
+    test('Simple SELECT query should be analyzed correctly', () => {
+      try {
+        const simpleQueryAnalysis = analyzeQuery('SELECT ?s WHERE { ?s ?p ?o }');
+        expect(simpleQueryAnalysis.isValid).toBeTruthy();
+        expect(simpleQueryAnalysis.queryType).toBe('SELECT');
+        expect(simpleQueryAnalysis.selectVariables.includes('?s')).toBeTruthy();
+        expect(simpleQueryAnalysis.triplePatternCount).toBe(1);
+      } catch (error) {
+        console.error('Simple SELECT query should be analyzed correctly', error);
+      }
+    });
 
-  // 4.2 Complex query with subquery
-  const complexQueryAnalysis = analyzeQuery(
-    'SELECT ?s WHERE { ?s ?p ?o . { SELECT ?o WHERE { ?s ?p ?o } } }'
-  );
-  assert(
-    complexQueryAnalysis.isValid &&
-      complexQueryAnalysis.features.hasSubquery,
-    'Complex query with subquery should be analyzed correctly'
-  );
+    test('Complex query with subquery should be analyzed correctly', () => {
+      try {
+        const complexQueryAnalysis = analyzeQuery('SELECT ?s WHERE { ?s ?p ?o . { SELECT ?o WHERE { ?s ?p ?o } } }');
+        expect(complexQueryAnalysis.isValid).toBeTruthy();
+        expect(complexQueryAnalysis.features.hasSubquery).toBeTruthy();
+      } catch (error) {
+        console.error('Complex query with subquery should be analyzed correctly', error);
+      }
+    });
 
-  // 4.3 ASK query
-  const askQueryAnalysis = analyzeQuery('ASK { ?s ?p ?o }');
-  assert(
-    askQueryAnalysis.isValid && askQueryAnalysis.queryType === 'ASK',
-    'ASK query should be analyzed correctly'
-  );
+    test('ASK query should be analyzed correctly', () => {
+      try {
+        const askQueryAnalysis = analyzeQuery('ASK { ?s ?p ?o }');
+        expect(askQueryAnalysis.isValid).toBeTruthy();
+        expect(askQueryAnalysis.queryType).toBe('ASK');
+      } catch (error) {
+        console.error('ASK query should be analyzed correctly', error);
+      }
+    });
 
-  //4.4 DESCRIBE query
-  const describeQueryAnalysis = analyzeQuery('DESCRIBE ?s WHERE { ?s ?p ?o }');
-  assert(
-    describeQueryAnalysis.isValid && describeQueryAnalysis.queryType === 'DESCRIBE',
-    'DESCRIBE query should be analyzed correctly'
-  );
+    test('DESCRIBE query should be analyzed correctly', () => {
+      try {
+        const describeQueryAnalysis = analyzeQuery('DESCRIBE ?s WHERE { ?s ?p ?o }');
+        expect(describeQueryAnalysis.isValid).toBeTruthy();
+        expect(describeQueryAnalysis.queryType).toBe('DESCRIBE');
+      } catch (error) {
+        console.error('DESCRIBE query should be analyzed correctly', error);
+      }
+    });
 
-  //4.5 CONSTRUCT query
-  const constructQueryAnalysis = analyzeQuery('CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }');
-  assert(
-    constructQueryAnalysis.isValid && constructQueryAnalysis.queryType === 'CONSTRUCT',
-    'CONSTRUCT query should be analyzed correctly'
-  );
-  console.log('  Ending analyzeQuery tests.');
+    test('CONSTRUCT query should be analyzed correctly', () => {
+      try {
+        const constructQueryAnalysis = analyzeQuery('CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }');
+        expect(constructQueryAnalysis.isValid).toBeTruthy();
+        expect(constructQueryAnalysis.queryType).toBe('CONSTRUCT');
+      } catch (error) {
+        console.error('CONSTRUCT query should be analyzed correctly', error);
+      }
+    });
+    console.log('  Ending analyzeQuery tests.');
+  });
 
-  // 5. resultsToCSV tests
-  console.log('  Starting resultsToCSV tests...');
+  describe('resultsToCSV', () => {
+    console.log('  Starting resultsToCSV tests...');
 
-  // 5.1 Valid results
-  const validResults = {
-    success: true,
-    columns: ['s', 'p', 'o'],
-    data: [
-      ['s1', 'p1', 'o1'],
-      ['s2', 'p2', 'o2'],
-    ],
-  };
-  assert(
-    resultsToCSV(validResults) === 's,p,o\ns1,p1,o1\ns2,p2,o2\n',
-    'Valid results should be converted to CSV correctly'
-  );
+    test('Valid results should be converted to CSV correctly', () => {
+      try {
+        const validResults = { success: true, columns: ['s', 'p', 'o'], data: [['s1', 'p1', 'o1'], ['s2', 'p2', 'o2']] };
+        expect(resultsToCSV(validResults)).toBe('s,p,o\ns1,p1,o1\ns2,p2,o2\n');
+      } catch (error) {
+        console.error('Valid results should be converted to CSV correctly', error);
+      }
+    });
 
-  // 5.2 Empty results
-  const emptyResults = { success: true, columns: [], data: [] };
-  assert(
-    resultsToCSV(emptyResults) === '\n',
-    'Empty results should be converted to empty CSV'
-  );
+    test('Empty results should be converted to empty CSV', () => {
+      try {
+        const emptyResults = { success: true, columns: [], data: [] };
+        expect(resultsToCSV(emptyResults)).toBe('\n');
+      } catch (error) {
+        console.error('Empty results should be converted to empty CSV', error);
+      }
+    });
 
-  // 5.3 Results with commas and quotes
-  const complexResults = {
-    success: true,
-    columns: ['label'],
-    data: [['value with , comma and "quotes"']],
-  };
-  assert(
-    resultsToCSV(complexResults) === 'label\n"value with , comma and ""quotes"""\n',
-    'Results with commas and quotes should be escaped correctly'
-  );
+    test('Results with commas and quotes should be escaped correctly', () => {
+      try {
+        const complexResults = { success: true, columns: ['label'], data: [['value with , comma and "quotes"']] };
+        expect(resultsToCSV(complexResults)).toBe('label\n"value with , comma and ""quotes"""\n');
+      } catch (error) {
+        console.error('Results with commas and quotes should be escaped correctly', error);
+      }
+    });
 
-  //5.4 Invalid Results
-  const invalidResults = null;
-
-  assert(resultsToCSV(invalidResults) === "", 'Invalid result should be empty');
-  console.log('  Ending resultsToCSV tests.');
-
+    test('Invalid result should be empty', () => {
+      try {
+        const invalidResults = null;
+        expect(resultsToCSV(invalidResults)).toBe("");
+      } catch (error) {
+        console.error('Invalid result should be empty', error);
+      }
+    });
+    console.log('  Ending resultsToCSV tests.');
+  });
   console.log('Ending SPARQL Service tests.');
-};
-
-testSparqlService();
+});

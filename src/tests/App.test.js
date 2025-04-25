@@ -1,14 +1,16 @@
 import { executeQuery } from '../api/sparqlService';
 import { assert } from '../utils/testUtils';
 
+describe('App Component Tests', () => {
+  console.log('Starting App component tests...\n');
+  
+  test('Basic file check', () => {
+    console.log('  Starting App component tests: basic file check...');
+    expect(true).toBe(true);
+    console.log('    ✓ Basic test passed\n');
+  });
 
-const testApp = async function() {
-  console.log('Starting App component tests...');
-
-  // First test
-  console.log('  Starting App component tests: basic file check...');
-  assert(true === true, 'The test file should be executable');
-  console.log('    ✓ Basic test passed');
+  describe('Query Execution Tests', () => {
 
   console.log('  Starting Query Execution tests...');
 
@@ -16,101 +18,124 @@ const testApp = async function() {
   const validEndpoint = 'https://publications.europa.eu/webapi/rdf/sparql';
   const validQuery = 'SELECT ?s WHERE { ?s ?p ?o } LIMIT 10';
   try {
-    const result = await await executeQuery(validEndpoint, validQuery);
-    assert(result.success, 'Valid endpoint and query should succeed');
-    assert(result.data.length > 0, 'Valid query should return results');
-    console.log('    ✓ Valid Endpoint and Query test passed');
-  } catch (error) {
-    console.error('    ✕ Valid Endpoint and Query test failed', error);
-  }
+    test('Valid Endpoint and Query', async () => {
+      console.log('    Starting Valid Endpoint and Query test...');
+      try {
+        const result = await executeQuery(validEndpoint, validQuery);
+        expect(result.success).toBe(true);
+        expect(result.data.length).toBeGreaterThan(0);
+        console.log('    ✓ Valid Endpoint and Query test passed\n');
+      } catch (error) {
+        console.error('    ✕ Valid Endpoint and Query test failed', error);
+      }
+    });
 
-  // 1.2 Invalid Endpoint
-  const invalidEndpoint = 'http://invalid-endpoint';
-  const anyQuery = 'SELECT * WHERE { ?s ?p ?o }';
-  try {
-    const result = await await executeQuery(invalidEndpoint, anyQuery);
-    assert(!result.success, 'Invalid endpoint should fail');
-    console.log('    ✓ Invalid Endpoint test passed');
-  } catch (error) {
-    console.error('    ✕ Invalid Endpoint test failed', error);
-  }
+    test('Invalid Endpoint', async () => {
+      console.log('    Starting Invalid Endpoint test...');
+      const invalidEndpoint = 'http://invalid-endpoint';
+      const anyQuery = 'SELECT * WHERE { ?s ?p ?o }';
+      try {
+        const result = await executeQuery(invalidEndpoint, anyQuery);
+        expect(result.success).toBe(false);
+        console.log('    ✓ Invalid Endpoint test passed\n');
+      } catch (error) {
+        console.error('    ✕ Invalid Endpoint test failed', error);
+      }
+    });
 
-  // 1.3 Invalid Query
-  const invalidQuery = 'INVALID QUERY';  
-  try {
-    const result = await await executeQuery('https://dbpedia.org/sparql', invalidQuery);
-    assert(!result.success, 'Invalid query should fail');
-    console.log('    ✓ Invalid Query test passed');
-  } catch (error) {
-    console.error('    ✕ Invalid Query test failed', error);
-  }
+    test('Invalid Query', async () => {
+      console.log('    Starting Invalid Query test...');
+      const invalidQuery = 'INVALID QUERY';
+      try {
+        const result = await executeQuery('https://dbpedia.org/sparql', invalidQuery);
+        expect(result.success).toBe(false);
+        console.log('    ✓ Invalid Query test passed\n');
+      } catch (error) {
+        console.error('    ✕ Invalid Query test failed', error);
+      }
+    });
 
-  // 1.4 No Results
-  const noResultsQuery = 'SELECT * WHERE { ?s ?p ?o FILTER (?s = <http://example.com/nonexistent>) }';
-  try {
-    const result = await await executeQuery(validEndpoint, noResultsQuery);
-    assert(result.success, 'No results query should succeed');
-    assert(result.data.length === 0, 'No results query should return no data');
-    console.log('    ✓ No Results test passed');
-  } catch (error) {
-    console.error('    ✕ No Results test failed', error);
-  }
+    test('No Results', async () => {
+      console.log('    Starting No Results test...');
+      const noResultsQuery = 'SELECT * WHERE { ?s ?p ?o FILTER (?s = <http://example.com/nonexistent>) }';
+      try {
+        const result = await executeQuery(validEndpoint, noResultsQuery);
+        expect(result.success).toBe(true);
+        expect(result.data.length).toBe(0);
+        console.log('    ✓ No Results test passed\n');
+      } catch (error) {
+        console.error('    ✕ No Results test failed', error);
+      }
+    });
 
-  // 1.5 Empty Endpoint
-  try {
-    const result = await await executeQuery("", anyQuery);
-    assert(!result.success, 'Empty Endpoint query should fail');    
-    console.log('    ✓ Empty Endpoint test passed');    
-  } catch (error) {
-    console.error('    ✕ Empty Endpoint test failed', error);
-  }
-  // 1.6 Complex Query test
-  const complexQuery = `
-    SELECT ?country ?countryLabel ?population WHERE {
-      ?country wdt:P31 wd:Q3624078.
-      ?country wdt:P1082 ?population.
-      SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-    }
-    ORDER BY DESC(?population)
-    LIMIT 10
-  `;
-  try{
-    const result = await executeQuery("https://query.wikidata.org/sparql", complexQuery);
-    assert(result.success, 'Complex query should succeed');
-    assert(result.data.length > 0, 'Complex query should return results');
-    console.log('    ✓ Complex Query test passed');
-  } catch(error){
-    console.error('    ✕ Complex Query test failed', error);
-  }
-    // 1.7 Time Out test
-  const timeOutEndpoint = 'https://query.wikidata.org/big';
-  try {
-    const result = await await executeQuery(timeOutEndpoint, validQuery);
-    assert(!result.success, 'Time Out should fail');    
-    console.log('    ✓ Time out test passed');    
-  } catch (error) {
-    console.error('    ✕ Time out test failed', error);
-  }
-    // 1.8 Ask test
-  const askQuery = 'ASK { ?s ?p ?o }';
-  try {
-    const result = await await executeQuery("https://dbpedia.org/sparql", askQuery);
-    assert(result.success, 'Ask query should pass');    
-    console.log('    ✓ Ask test passed');    
-  } catch (error) {
-    console.error('    ✕ Empty Endpoint test failed', error);
-  }
-  
-    console.log('  Ending Query Execution tests.');
+    test('Empty Endpoint', async () => {
+      console.log('    Starting Empty Endpoint test...');
+      const anyQuery = 'SELECT * WHERE { ?s ?p ?o }';
+      try {
+        const result = await executeQuery("", anyQuery);
+        expect(result.success).toBe(false);
+        console.log('    ✓ Empty Endpoint test passed\n');
+      } catch (error) {
+        console.error('    ✕ Empty Endpoint test failed', error);
+      }
+    });
 
+    test('Complex Query', async () => {
+      console.log('    Starting Complex Query test...');
+      const complexQuery = `
+        SELECT ?country ?countryLabel ?population WHERE {
+          ?country wdt:P31 wd:Q3624078.
+          ?country wdt:P1082 ?population.
+          SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+        }
+        ORDER BY DESC(?population)
+        LIMIT 10
+      `;
+      try {
+        const result = await executeQuery("https://query.wikidata.org/sparql", complexQuery);
+        expect(result.success).toBe(true);
+        expect(result.data.length).toBeGreaterThan(0);
+        console.log('    ✓ Complex Query test passed\n');
+      } catch (error) {
+        console.error('    ✕ Complex Query test failed', error);
+      }
+    });
 
-  // 2. Query history
-  console.log('  Starting query history tests...');
+    test('Time Out', async () => {
+      console.log('    Starting Time Out test...');
+      const timeOutEndpoint = 'https://query.wikidata.org/big';
+      try {
+        const result = await executeQuery(timeOutEndpoint, validQuery);
+        expect(result.success).toBe(false);
+        console.log('    ✓ Time out test passed\n');
+      } catch (error) {
+        console.error('    ✕ Time out test failed', error);
+      }
+    });
 
-    // Add Query :
-    const addQueryTest = async () => {
+    test('Ask', async () => {
+      console.log('    Starting Ask test...');
+      const askQuery = 'ASK { ?s ?p ?o }';
+      try {
+        const result = await executeQuery("https://dbpedia.org/sparql", askQuery);
+        expect(result.success).toBe(true);
+        console.log('    ✓ Ask test passed\n');
+      } catch (error) {
+        console.error('    ✕ Ask test failed', error);
+      }
+    });
+
+    console.log('  Ending Query Execution tests.\n');
+
+  });
+
+  describe('Query History Tests', () => {
+    console.log('  Starting query history tests...');
+
+    test('Add Query', async () => {
+      console.log('    Starting Add Query test...');
       let queryHistory = [];
-      const historyEntry =  {
+      const historyEntry = {
         id: 'test',
         name: 'Test Query',
         query: 'SELECT * WHERE {?s ?p ?o}',
@@ -120,15 +145,14 @@ const testApp = async function() {
         bookmarked: false,
       };
       queryHistory = [historyEntry, ...queryHistory];
-      assert(queryHistory.length === 1, 'Adding a query should increase history length');
-      console.log('    ✓ Add Query test passed');
-    };
-    await addQueryTest();
+      expect(queryHistory.length).toBe(1);
+      console.log('    ✓ Add Query test passed\n');
+    });
 
-      // Delete Query:
-    const deleteQueryTest = async () => {
-        let queryHistory;
-        const historyEntry = {
+    test('Delete Query', async () => {
+      console.log('    Starting Delete Query test...');
+      let queryHistory = [];
+      const historyEntry = {
         id: 'test',
         name: 'Test Query',
         query: 'SELECT * WHERE {?s ?p ?o}',
@@ -136,18 +160,17 @@ const testApp = async function() {
         resultCount: 0,
         executionTime: 0,
         bookmarked: false,
-        };
-        queryHistory = [historyEntry, ...queryHistory];
-        queryHistory = queryHistory.filter(item => item.id !== 'test');
-        assert(queryHistory.length === 0, 'Deleting a query should decrease history length');
-        console.log('    ✓ Delete Query test passed');
-    };
-    await deleteQueryTest();
+      };
+      queryHistory = [historyEntry, ...queryHistory];
+      queryHistory = queryHistory.filter(item => item.id !== 'test');
+      expect(queryHistory.length).toBe(0);
+      console.log('    ✓ Delete Query test passed\n');
+    });
 
-    // Bookmark:
-    const bookmarkQueryTest = async () => {
-        let queryHistory;
-        const historyEntry = {
+    test('Bookmark', async () => {
+      console.log('    Starting Bookmark test...');
+      let queryHistory = [];
+      const historyEntry = {
         id: 'test',
         name: 'Test Query',
         query: 'SELECT * WHERE {?s ?p ?o}',
@@ -155,22 +178,19 @@ const testApp = async function() {
         resultCount: 0,
         executionTime: 0,
         bookmarked: false,
-        };
-        queryHistory = [historyEntry, ...queryHistory];
-        queryHistory = queryHistory.map(item =>
-            item.id === 'test'
-            ? { ...item, bookmarked: !item.bookmarked }
-            : item
-        );
-        assert(queryHistory[0].bookmarked === true, 'Query should be bookmarked');
-        console.log('    ✓ Bookmark test passed');
-    };
-    await bookmarkQueryTest();
+      };
+      queryHistory = [historyEntry, ...queryHistory];
+      queryHistory = queryHistory.map(item =>
+        item.id === 'test' ? { ...item, bookmarked: !item.bookmarked } : item
+      );
+      expect(queryHistory[0].bookmarked).toBe(true);
+      console.log('    ✓ Bookmark test passed\n');
+    });
 
-    // Load query
-    const loadQueryTest = async () => {
-        let queryHistory;
-        const historyEntry = {
+    test('Load Query', async () => {
+      console.log('    Starting Load Query test...');
+      let queryHistory = [];
+      const historyEntry = {
         id: 'test',
         name: 'Test Query',
         query: 'SELECT * WHERE {?s ?p ?o}',
@@ -178,17 +198,16 @@ const testApp = async function() {
         resultCount: 0,
         executionTime: 0,
         bookmarked: false,
-        };
-        queryHistory = [historyEntry, ...queryHistory];
+      };
+      queryHistory = [historyEntry, ...queryHistory];
 
-        const loadedQuery = historyEntry.query;
-        assert(loadedQuery === 'SELECT * WHERE {?s ?p ?o}', 'Loading a query should return the query');
-        console.log('    ✓ Load query test passed');
-    };
-    await loadQueryTest();
+      const loadedQuery = historyEntry.query;
+      expect(loadedQuery).toBe('SELECT * WHERE {?s ?p ?o}');
+      console.log('    ✓ Load Query test passed\n');
+    });
 
-    console.log('  Ending query history tests.');
+    console.log('  Ending query history tests.\n');
+  });
 
-  console.log('Ending App component tests.');
-};
-testApp();
+  console.log('Ending App component tests.\n');
+});

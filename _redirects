@@ -1,0 +1,5 @@
+# Proxy Rules for SPARQL Endpoints
+/webapi/*  https://publications.europa.eu/webapi/:splat  200
+
+# Wildcard rule for all other paths, serving SPA (e.g., index.html)
+/*  /index.html  200
