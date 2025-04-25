@@ -19,8 +19,11 @@ const testSparqlService = async function () {
     'Valid SELECT query should be valid'
   );
 
-  // 1.2 Valid ASK query
-  assert(isValidSparql('ASK { ?s ?p ?o }'), 'Valid ASK query should be valid');
+  // 1.2 Valid ASK query  
+  assert(
+    isValidSparql('ASK { ?s ?p ?o }'),
+    'Valid ASK query should be valid'
+  );
 
   // 1.3 Invalid query (missing WHERE)
   assert(

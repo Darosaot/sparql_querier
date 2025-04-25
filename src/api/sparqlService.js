@@ -117,6 +117,7 @@ export const executeQuery = async (endpoint, query, options = {}) => {
       const proxyUrl = '/.netlify/functions/sparql-proxy';
       
       const proxyResponse = await axios.post(proxyUrl, {
+        
         endpoint: endpoint,
         query: query
       }, {

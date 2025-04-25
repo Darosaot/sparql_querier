@@ -1,6 +1,7 @@
 // src/components/App.js
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import { Container, Row, Col, Nav, Tab } from 'react-bootstrap';
 import SparqlInput from './SparqlInput';
 import ErrorDisplay from './ErrorDisplay';
@@ -31,6 +32,10 @@ class ErrorBoundary extends React.Component {
   static getDerivedStateFromError(error) {
     return { hasError: true };
   }
+
+  static propTypes = {
+    children: PropTypes.node.isRequired,
+  };
 
   render() {
     if (this.state.hasError) {

@@ -5,6 +5,11 @@ import { assert } from '../utils/testUtils';
 const testApp = async function() {
   console.log('Starting App component tests...');
 
+  // First test
+  console.log('  Starting App component tests: basic file check...');
+  assert(true === true, 'The test file should be executable');
+  console.log('    ✓ Basic test passed');
+
   console.log('  Starting Query Execution tests...');
 
   // 1.1 Valid Endpoint and Query
