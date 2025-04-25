@@ -47,8 +47,7 @@ export const executeQuery = async (endpoint, query, options = {}) => {
           'Content-Type': 'application/x-www-form-urlencoded',
           'User-Agent': 'SPARQLAnalyticsApp/1.0'
         },
-        timeout: timeout
-      ,
+        timeout: timeout,
         cancelToken: source.token
     );
     
@@ -120,10 +119,10 @@ export const executeQuery = async (endpoint, query, options = {}) => {
         endpoint: endpoint,
         query: query
       }, {
-        timeout: timeout // Same timeout for proxy
-          ,
-          cancelToken: source.token // Pass the cancellation token to the proxy request
-      }
+        timeout: timeout, // Same timeout for proxy
+        cancelToken: source.token // Pass the cancellation token to the proxy request
+      } 
+
         );
       
       const endTime = performance.now();
