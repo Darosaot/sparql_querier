@@ -18,112 +18,112 @@ describe('App Component Tests', () => {
   const validEndpoint = 'https://publications.europa.eu/webapi/rdf/sparql';
   const validQuery = 'SELECT ?s WHERE { ?s ?p ?o } LIMIT 10';
   try {
-    test('Valid Endpoint and Query', async () => {
+      test('Valid Endpoint and Query', async () => {
       console.log('    Starting Valid Endpoint and Query test...');
-      try {
+        try {
         const result = await executeQuery(validEndpoint, validQuery);
         expect(result.success).toBe(true);
         expect(result.data.length).toBeGreaterThan(0);
         console.log('    ✓ Valid Endpoint and Query test passed\n');
-      } catch (error) {
+        } catch (error) {
         console.error('    ✕ Valid Endpoint and Query test failed', error);
-      }
-    });
+        }
+      });
 
-    test('Invalid Endpoint', async () => {
+      test('Invalid Endpoint', async () => {
       console.log('    Starting Invalid Endpoint test...');
       const invalidEndpoint = 'http://invalid-endpoint';
       const anyQuery = 'SELECT * WHERE { ?s ?p ?o }';
-      try {
+        try {
         const result = await executeQuery(invalidEndpoint, anyQuery);
         expect(result.success).toBe(false);
         console.log('    ✓ Invalid Endpoint test passed\n');
-      } catch (error) {
+        } catch (error) {
         console.error('    ✕ Invalid Endpoint test failed', error);
-      }
-    });
+        }
+      });
 
-    test('Invalid Query', async () => {
+      test('Invalid Query', async () => {
       console.log('    Starting Invalid Query test...');
       const invalidQuery = 'INVALID QUERY';
-      try {
+        try {
         const result = await executeQuery('https://dbpedia.org/sparql', invalidQuery);
         expect(result.success).toBe(false);
         console.log('    ✓ Invalid Query test passed\n');
-      } catch (error) {
+        } catch (error) {
         console.error('    ✕ Invalid Query test failed', error);
-      }
-    });
+        }
+      });
 
-    test('No Results', async () => {
+      test('No Results', async () => {
       console.log('    Starting No Results test...');
       const noResultsQuery = 'SELECT * WHERE { ?s ?p ?o FILTER (?s = <http://example.com/nonexistent>) }';
-      try {
+        try {
         const result = await executeQuery(validEndpoint, noResultsQuery);
         expect(result.success).toBe(true);
         expect(result.data.length).toBe(0);
         console.log('    ✓ No Results test passed\n');
-      } catch (error) {
+        } catch (error) {
         console.error('    ✕ No Results test failed', error);
-      }
-    });
+        }
+      });
 
-    test('Empty Endpoint', async () => {
+      test('Empty Endpoint', async () => {
       console.log('    Starting Empty Endpoint test...');
       const anyQuery = 'SELECT * WHERE { ?s ?p ?o }';
-      try {
+        try {
         const result = await executeQuery("", anyQuery);
         expect(result.success).toBe(false);
         console.log('    ✓ Empty Endpoint test passed\n');
-      } catch (error) {
+        } catch (error) {
         console.error('    ✕ Empty Endpoint test failed', error);
-      }
-    });
+        }
+      });
 
-    test('Complex Query', async () => {
+      test('Complex Query', async () => {
       console.log('    Starting Complex Query test...');
       const complexQuery = `
-        SELECT ?country ?countryLabel ?population WHERE {
-          ?country wdt:P31 wd:Q3624078.
-          ?country wdt:P1082 ?population.
-          SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
-        }
-        ORDER BY DESC(?population)
-        LIMIT 10
+      SELECT ?country ?countryLabel ?population WHERE {
+      ?country wdt:P31 wd:Q3624078.
+      ?country wdt:P1082 ?population.
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+      }
+      ORDER BY DESC(?population)
+      LIMIT 10
       `;
-      try {
+        try {
         const result = await executeQuery("https://query.wikidata.org/sparql", complexQuery);
         expect(result.success).toBe(true);
         expect(result.data.length).toBeGreaterThan(0);
         console.log('    ✓ Complex Query test passed\n');
-      } catch (error) {
+        } catch (error) {
         console.error('    ✕ Complex Query test failed', error);
-      }
-    });
+        }
+      });
 
-    test('Time Out', async () => {
+      test('Time Out', async () => {
       console.log('    Starting Time Out test...');
       const timeOutEndpoint = 'https://query.wikidata.org/big';
-      try {
+        try {
         const result = await executeQuery(timeOutEndpoint, validQuery);
         expect(result.success).toBe(false);
         console.log('    ✓ Time out test passed\n');
-      } catch (error) {
+        } catch (error) {
         console.error('    ✕ Time out test failed', error);
-      }
-    });
+        }
+      });
 
-    test('Ask', async () => {
+      test('Ask', async () => {
       console.log('    Starting Ask test...');
       const askQuery = 'ASK { ?s ?p ?o }';
-      try {
+        try {
         const result = await executeQuery("https://dbpedia.org/sparql", askQuery);
         expect(result.success).toBe(true);
         console.log('    ✓ Ask test passed\n');
-      } catch (error) {
+        } catch (error) {
         console.error('    ✕ Ask test failed', error);
-      }
-    });
+        }
+      });
 
     console.log('  Ending Query Execution tests.\n');
 
@@ -211,3 +211,4 @@ describe('App Component Tests', () => {
 
   console.log('Ending App component tests.\n');
 });
+
