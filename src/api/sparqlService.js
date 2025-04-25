@@ -120,9 +120,9 @@ export const executeQuery = async (endpoint, query, options = {}) => {
         query: query
       }, {
         timeout: timeout, // Same timeout for proxy
-        cancelToken: source.token // Pass the cancellation token to the proxy request
-      } 
-
+        cancelToken: source.token
+      }
+       
         );
       
       const endTime = performance.now();
