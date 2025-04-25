@@ -1,6 +1,7 @@
 import { executeQuery } from '../api/sparqlService';
 import { assert } from '../utils/testUtils';
 
+
 const testApp = async function() {
   console.log('Starting App component tests...');
 
@@ -30,7 +31,7 @@ const testApp = async function() {
   }
 
   // 1.3 Invalid Query
-  const invalidQuery = 'INVALID QUERY';
+  const invalidQuery = 'INVALID QUERY';  
   try {
     const result = await await executeQuery('https://dbpedia.org/sparql', invalidQuery);
     assert(!result.success, 'Invalid query should fail');
@@ -55,6 +56,42 @@ const testApp = async function() {
     const result = await await executeQuery("", anyQuery);
     assert(!result.success, 'Empty Endpoint query should fail');    
     console.log('    ✓ Empty Endpoint test passed');    
+  } catch (error) {
+    console.error('    ✕ Empty Endpoint test failed', error);
+  }
+  // 1.6 Complex Query test
+  const complexQuery = `
+    SELECT ?country ?countryLabel ?population WHERE {
+      ?country wdt:P31 wd:Q3624078.
+      ?country wdt:P1082 ?population.
+      SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+    }
+    ORDER BY DESC(?population)
+    LIMIT 10
+  `;
+  try{
+    const result = await executeQuery("https://query.wikidata.org/sparql", complexQuery);
+    assert(result.success, 'Complex query should succeed');
+    assert(result.data.length > 0, 'Complex query should return results');
+    console.log('    ✓ Complex Query test passed');
+  } catch(error){
+    console.error('    ✕ Complex Query test failed', error);
+  }
+    // 1.7 Time Out test
+  const timeOutEndpoint = 'https://query.wikidata.org/big';
+  try {
+    const result = await await executeQuery(timeOutEndpoint, validQuery);
+    assert(!result.success, 'Time Out should fail');    
+    console.log('    ✓ Time out test passed');    
+  } catch (error) {
+    console.error('    ✕ Time out test failed', error);
+  }
+    // 1.8 Ask test
+  const askQuery = 'ASK { ?s ?p ?o }';
+  try {
+    const result = await await executeQuery("https://dbpedia.org/sparql", askQuery);
+    assert(result.success, 'Ask query should pass');    
+    console.log('    ✓ Ask test passed');    
   } catch (error) {
     console.error('    ✕ Empty Endpoint test failed', error);
   }
